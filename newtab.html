@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新标签页</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- 背景壁纸 -->
+  <div class="wallpaper" id="wallpaper"></div>
+  <div class="overlay"></div>
+
+  <!-- 主容器 -->
+  <div class="main-container">
+    <!-- 侧边栏 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>📑 分类</h2>
+        <button class="btn-icon" id="toggleSidebar" title="收起侧边栏">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+      </div>
+      <nav class="category-list" id="categoryList">
+        <!-- 分类列表由 JS 动态生成 -->
+      </nav>
+      <button class="btn-add-category" id="addCategoryBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        添加分类
+      </button>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="content">
+      <!-- 时钟和问候语 -->
+      <section class="clock-section">
+        <div class="time" id="time">00:00</div>
+        <div class="greeting" id="greeting">你好</div>
+        <div class="date" id="date"></div>
+      </section>
+
+      <!-- 搜索栏 -->
+      <section class="search-section">
+        <div class="search-box">
+          <div class="search-engine-selector" id="searchEngineSelector">
+            <img src="" alt="" id="searchEngineIcon" class="search-engine-icon">
+            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+          <input type="text" class="search-input" id="searchInput" placeholder="搜索内容..." autocomplete="off">
+          <button class="search-btn" id="searchBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="M21 21l-4.35-4.35"/>
+            </svg>
+          </button>
+        </div>
+        <!-- 搜索引擎下拉菜单 -->
+        <div class="search-engine-dropdown" id="searchEngineDropdown">
+          <div class="search-engine-option" data-engine="google">
+            <img src="https://www.google.com/favicon.ico" alt="Google">
+            <span>Google</span>
+          </div>
+          <div class="search-engine-option" data-engine="bing">
+            <img src="https://www.bing.com/favicon.ico" alt="Bing">
+            <span>Bing</span>
+          </div>
+          <div class="search-engine-option" data-engine="baidu">
+            <img src="https://www.baidu.com/favicon.ico" alt="百度">
+            <span>百度</span>
+          </div>
+          <div class="search-engine-option" data-engine="duckduckgo">
+            <img src="https://duckduckgo.com/favicon.ico" alt="DuckDuckGo">
+            <span>DuckDuckGo</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 快捷链接网格 -->
+      <section class="shortcuts-section">
+        <div class="shortcuts-header">
+          <h3 id="currentCategoryName">首页</h3>
+        </div>
+        <div class="shortcuts-grid" id="shortcutsGrid">
+          <!-- 快捷链接由 JS 动态生成 -->
+        </div>
+        <button class="btn-add-shortcut" id="addShortcutBtn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span>添加快捷方式</span>
+        </button>
+      </section>
+    </main>
+  </div>
+
+  <!-- 设置按钮 -->
+  <button class="settings-btn" id="settingsBtn" title="设置">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
+
+  <!-- 设置模态框 -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>⚙️ 设置</h2>
+        <button class="btn-close" id="closeSettings">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- 壁纸设置 -->
+        <div class="settings-group">
+          <h3>🖼️ 壁纸</h3>
+          <div class="wallpaper-grid" id="wallpaperGrid">
+            <!-- 壁纸选项由 JS 生成 -->
+          </div>
+          <div class="custom-wallpaper">
+            <label>自定义壁纸 URL:</label>
+            <input type="text" id="customWallpaperUrl" placeholder="输入图片链接...">
+            <button class="btn-primary" id="applyCustomWallpaper">应用</button>
+          </div>
+        </div>
+
+        <!-- 时钟设置 -->
+        <div class="settings-group">
+          <h3>⏰ 时钟</h3>
+          <div class="setting-row">
+            <label>时间格式:</label>
+            <select id="clockFormat">
+              <option value="24">24小时制</option>
+              <option value="12">12小时制</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label>显示秒数:</label>
+            <input type="checkbox" id="showSeconds">
+          </div>
+        </div>
+
+        <!-- 搜索设置 -->
+        <div class="settings-group">
+          <h3>🔍 搜索</h3>
+          <div class="setting-row">
+            <label>默认搜索引擎:</label>
+            <select id="defaultSearchEngine">
+              <option value="google">Google</option>
+              <option value="bing">Bing</option>
+              <option value="baidu">百度</option>
+              <option value="duckduckgo">DuckDuckGo</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 显示设置 -->
+        <div class="settings-group">
+          <h3>👁️ 显示</h3>
+          <div class="setting-row">
+            <label>显示侧边栏:</label>
+            <input type="checkbox" id="showSidebar" checked>
+          </div>
+          <div class="setting-row">
+            <label>显示时钟:</label>
+            <input type="checkbox" id="showClock" checked>
+          </div>
+          <div class="setting-row">
+            <label>显示搜索栏:</label>
+            <input type="checkbox" id="showSearch" checked>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加快捷方式模态框 -->
+  <div class="modal-overlay" id="shortcutModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="shortcutModalTitle">➕ 添加快捷方式</h2>
+        <button class="btn-close" id="closeShortcutModal">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editShortcutId">
+        <div class="form-group">
+          <label for="shortcutName">名称:</label>
+          <input type="text" id="shortcutName" placeholder="例如：Google">
+        </div>
+        <div class="form-group">
+          <label for="shortcutUrl">网址:</label>
+          <input type="text" id="shortcutUrl" placeholder="例如：https://google.com">
+        </div>
+        <div class="form-group">
+          <label>图标:</label>
+          <div class="icon-options">
+            <div class="icon-option active" data-type="auto">
+              <span>🔄 自动获取</span>
+            </div>
+            <div class="icon-option" data-type="custom">
+              <span>🔗 自定义URL</span>
+            </div>
+            <div class="icon-option" data-type="emoji">
+              <span>😀 表情符号</span>
+            </div>
+          </div>
+          <input type="text" id="shortcutIcon" placeholder="图标URL或表情符号" style="display:none;">
+        </div>
+        <div class="form-actions">
+          <button class="btn-secondary" id="cancelShortcut">取消</button>
+          <button class="btn-primary" id="saveShortcut">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加分类模态框 -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="categoryModalTitle">➕ 添加分类</h2>
+        <button class="btn-close" id="closeCategoryModal">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editCategoryId">
+        <div class="form-group">
+          <label for="categoryName">分类名称:</label>
+          <input type="text" id="categoryName" placeholder="例如：工作">
+        </div>
+        <div class="form-group">
+          <label for="categoryIcon">图标 (表情符号):</label>
+          <input type="text" id="categoryIcon" placeholder="例如：💼" maxlength="2">
+        </div>
+        <div class="form-actions">
+          <button class="btn-secondary" id="cancelCategory">取消</button>
+          <button class="btn-primary" id="saveCategory">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右键菜单 -->
+  <div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" id="editItem">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+      编辑
+    </div>
+    <div class="context-menu-item danger" id="deleteItem">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+      删除
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="js/storage.js"></script>
+  <script src="js/categories.js"></script>
+  <script src="js/shortcuts.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

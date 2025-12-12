@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            width: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .popup-container {
+            padding: 20px;
+        }
+
+        .popup-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .popup-header h1 {
+            font-size: 24px;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .popup-header p {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .popup-body {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .stat-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .popup-footer {
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .btn-open {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 20px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-open:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .version {
+            margin-top: 12px;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="popup-container">
+        <div class="popup-header">
+            <h1>🏠 MyTab</h1>
+            <p>你的个性化新标签页</p>
+        </div>
+
+        <div class="popup-body">
+            <div class="stat-row">
+                <span class="stat-label">快捷方式</span>
+                <span class="stat-value" id="shortcutCount">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">分类</span>
+                <span class="stat-value" id="categoryCount">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">当前壁纸</span>
+                <span class="stat-value" id="currentWallpaper">默认</span>
+            </div>
+        </div>
+
+        <div class="popup-footer">
+            <button class="btn-open" id="openNewTab">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                打开新标签页
+            </button>
+        </div>
+
+        <div class="version">版本 1.0.0</div>
+    </div>
+
+    <script src="js/popup.js"></script>
+</body>
+
+</html>
