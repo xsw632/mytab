@@ -7,6 +7,9 @@ const App = {
      * 初始化应用
      */
     async init() {
+        // 初始化 DB
+        if (window.ImageDB) await ImageDB.init();
+
         // 初始化各模块
         await Categories.init();
         await Shortcuts.init();
@@ -210,6 +213,10 @@ const App = {
 };
 
 // 启动应用
-document.addEventListener('DOMContentLoaded', () => {
-    App.init();
+document.addEventListener('DOMContentLoaded', async () => {
+    await App.init();
+    // 移除 preload 类，启用动画
+    requestAnimationFrame(() => {
+        document.body.classList.remove('preload');
+    });
 });

@@ -24,7 +24,12 @@ const Settings = {
         { id: 'landscape5', name: '星空', url: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1920&q=80' },
         { id: 'landscape6', name: '日落', url: 'https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=1920&q=80' },
         { id: 'landscape7', name: '樱花', url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80' },
-        { id: 'landscape8', name: '雪山', url: 'https://images.unsplash.com/photo-1483921020237-2ff51e8e4b22?w=1920&q=80' }
+        { id: 'landscape8', name: '雪山', url: 'https://images.unsplash.com/photo-1483921020237-2ff51e8e4b22?w=1920&q=80' },
+        { id: 'landscape9', name: '大漠', url: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=1920&q=80' },
+        { id: 'landscape10', name: '极光', url: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=1920&q=80' },
+        { id: 'landscape11', name: '雨林', url: 'https://images.unsplash.com/photo-1511497584788-876760111969?w=1920&q=80' },
+        { id: 'landscape12', name: '海岛', url: 'https://images.unsplash.com/photo-1559128010-7c1ad6e1b6a5?w=1920&q=80' },
+        { id: 'landscape13', name: '秋色', url: 'https://images.unsplash.com/photo-1507371341162-fe63244634c5?w=1920&q=80' }
     ],
 
     // 搜索引擎配置
@@ -97,34 +102,60 @@ const Settings = {
     /**
      * 应用壁纸
      */
-    applyWallpaper() {
+    async applyWallpaper() {
         const wallpaperEl = document.getElementById('wallpaper');
         const overlayEl = document.querySelector('.overlay');
 
-        if (!wallpaperEl) {
-            console.error('Wallpaper element not found');
-            return;
-        }
+        if (!wallpaperEl) return;
 
         const wpId = this.settings.wallpaper || 'none';
         const customWp = this.settings.customWallpaper;
         const wp = this.wallpapers.find(w => w.id === wpId);
         const wpUrl = customWp || (wp ? wp.url : '');
 
-        console.log('Applying wallpaper:', wpId, 'URL:', wpUrl);
+        console.log('Applying wallpaper:', wpId);
+
+        // 重置样式
+        wallpaperEl.style.cssText = '';
 
         if (!wpUrl || wpId === 'none') {
-            wallpaperEl.style.background = '';
-            wallpaperEl.style.backgroundImage = '';
             overlayEl.style.background = 'rgba(248, 250, 252, 0.95)';
-        } else if (wpUrl.startsWith('linear-gradient') || wpUrl.startsWith('radial-gradient')) {
+            return;
+        }
+
+        if (wpUrl.startsWith('linear-gradient') || wpUrl.startsWith('radial-gradient')) {
+            // 渐变
             wallpaperEl.style.background = wpUrl;
-            wallpaperEl.style.backgroundImage = '';
-            overlayEl.style.background = 'rgba(255, 255, 255, 0.3)';
+            overlayEl.style.background = 'rgba(255, 255, 255, 0.1)';
         } else {
-            wallpaperEl.style.background = '';
-            wallpaperEl.style.backgroundImage = `url("${wpUrl}")`;
-            overlayEl.style.background = 'rgba(255, 255, 255, 0.65)';
+            // 图片处理逻辑
+            overlayEl.style.background = 'rgba(255, 255, 255, 0)';
+
+            let finalUrl = wpUrl;
+
+            // 尝试从缓存获取 Blob
+            if (window.ImageDB) {
+                try {
+                    const blob = await ImageDB.getImage(wpUrl);
+                    if (blob) {
+                        console.log('Cache hit for wallpaper');
+                        finalUrl = URL.createObjectURL(blob);
+                    } else if (wpUrl.startsWith('http')) {
+                        console.log('Cache miss, downloading in background');
+                        // 后台下载缓存 (不阻塞当前显示)
+                        ImageDB.saveFromUrl(wpUrl);
+                    }
+                } catch (e) {
+                    console.error('Cache check failed:', e);
+                }
+            }
+
+            // 使用拆分属性确保渲染正确
+            wallpaperEl.style.backgroundImage = `url('${finalUrl}')`;
+            wallpaperEl.style.backgroundSize = 'cover';
+            wallpaperEl.style.backgroundPosition = 'center center';
+            wallpaperEl.style.backgroundRepeat = 'no-repeat';
+            wallpaperEl.style.backgroundAttachment = 'fixed';
         }
     },
 
@@ -177,9 +208,13 @@ const Settings = {
             } else if (wp.url.startsWith('linear-gradient')) {
                 styleAttr = `background: ${wp.url}`;
             } else {
-                // 对于图片URL，需要正确转义
-                const escapedUrl = wp.url.replace(/"/g, '\\"');
-                styleAttr = `background-image: url("${escapedUrl}"); background-size: cover; background-position: center`;
+                // 生成缩略图链接 (300px) - 使用正则确保替换任意分辨率
+                let thumbUrl = wp.url;
+                if (thumbUrl.includes('unsplash.com')) {
+                    thumbUrl = thumbUrl.replace(/w=\d+/, 'w=300').replace(/q=\d+/, 'q=80');
+                }
+                const escapedUrl = thumbUrl.replace(/'/g, "\\'");
+                styleAttr = `background: url('${escapedUrl}') center center / cover no-repeat`;
             }
 
             return `
