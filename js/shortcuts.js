@@ -39,7 +39,7 @@ const Shortcuts = {
 
         const shortcuts = this.getCurrentShortcuts();
 
-        // 先渲染占位或原始 URL
+        // Generate HTML without inline event handlers
         container.innerHTML = shortcuts.map(shortcut => {
             const iconHtml = this.getIconHtml(shortcut);
             return `
@@ -53,7 +53,22 @@ const Shortcuts = {
       `;
         }).join('');
 
-        // 异步加载缓存图标
+        // Add error event listeners and cache logic
+        const shortcutImages = container.querySelectorAll('.shortcut-icon img');
+        shortcutImages.forEach(img => {
+            img.addEventListener('error', (e) => {
+                const parent = e.target.parentElement;
+                const shortcutId = parent.id.replace('icon-', '');
+                const shortcut = this.shortcuts.find(s => s.id === shortcutId);
+
+                if (shortcut) {
+                    e.target.style.display = 'none';
+                    parent.innerHTML = `<span class="emoji">${shortcut.name.charAt(0).toUpperCase()}</span>`;
+                }
+            });
+        });
+
+        // Async load cached icons
         if (window.ImageDB) {
             for (const shortcut of shortcuts) {
                 const img = document.querySelector(`#icon-${shortcut.id} img[data-cache]`);
@@ -61,7 +76,7 @@ const Shortcuts = {
                     const url = img.getAttribute('data-src');
                     try {
                         const blobUrl = await ImageDB.getOrFetch(url);
-                        img.src = blobUrl;
+                        if (blobUrl) img.src = blobUrl;
                     } catch (e) {
                         console.error('Icon cache load failed:', e);
                     }
@@ -69,7 +84,7 @@ const Shortcuts = {
             }
         }
 
-        // 更新分类列表中的计数
+        // Update counts
         Categories.render();
     },
 
@@ -78,16 +93,16 @@ const Shortcuts = {
      */
     getIconHtml(shortcut) {
         if (shortcut.icon === 'auto' || !shortcut.icon) {
-            // 自动获取 favicon
+            // Automatic favicon using DuckDuckGo service
             const url = new URL(shortcut.url);
-            const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
-            // 添加 data-cache 标记，让 render 知道需要缓存
-            return `<img src="${faviconUrl}" data-src="${faviconUrl}" data-cache="true" alt="${this.escapeHtml(shortcut.name)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\\'emoji\\'>${shortcut.name.charAt(0).toUpperCase()}</span>'">`;
+            const faviconUrl = `https://icons.duckduckgo.com/ip3/${url.hostname}.ico`;
+            // Add data-cache mark
+            return `<img src="${faviconUrl}" data-src="${faviconUrl}" data-cache="true" alt="${this.escapeHtml(shortcut.name)}">`;
         } else if (shortcut.icon.startsWith('http')) {
-            // 自定义 URL
-            return `<img src="${shortcut.icon}" data-src="${shortcut.icon}" data-cache="true" alt="${this.escapeHtml(shortcut.name)}" onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\\'emoji\\'>${shortcut.name.charAt(0).toUpperCase()}</span>'">`;
+            // Custom URL
+            return `<img src="${shortcut.icon}" data-src="${shortcut.icon}" data-cache="true" alt="${this.escapeHtml(shortcut.name)}">`;
         } else {
-            // 表情符号
+            // Emoji
             return `<span class="emoji">${shortcut.icon}</span>`;
         }
     },
@@ -105,17 +120,58 @@ const Shortcuts = {
         const iconOptions = document.querySelectorAll('.icon-option');
         const iconInput = document.getElementById('shortcutIcon');
 
-        // ... (rest of binding code) ...
-        // Note: For brevity in this diff, assuming bindEvents content is largely same but just context needed.
-        // Actually, the replace block needs to be exact.
-        // Re-reading file: bindEvents starts at line 80.
-        // I will only replace render and getIconHtml logic mostly.
+        // Toggle icon options
+        iconOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                iconOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
 
-        // Let's stick to replacing render and getIconHtml.
-        // But also need to update `save` to trigger cache.
+                const type = option.dataset.type;
+                if (type === 'auto') {
+                    iconInput.style.display = 'none';
+                    iconInput.value = '';
+                } else {
+                    iconInput.style.display = 'block';
+                    iconInput.placeholder = type === 'custom' ? '图标URL' : '输入表情符号';
+                    if (type === 'custom') {
+                        // Keep value if it's already a URL
+                        if (!iconInput.value.startsWith('http')) iconInput.value = '';
+                    } else {
+                        // Keep value if it's already an emoji (simple check)
+                        if (iconInput.value.startsWith('http')) iconInput.value = '';
+                    }
+                    iconInput.focus();
+                }
+            });
+        });
+
+        // Open Add Modal
+        addBtn?.addEventListener('click', () => {
+            this.showModal();
+        });
+
+        // Close Modal
+        closeBtn?.addEventListener('click', () => this.hideModal());
+        cancelBtn?.addEventListener('click', () => this.hideModal());
+
+        // Save
+        saveBtn?.addEventListener('click', () => this.save());
+
+        // Context Menu
+        if (container) {
+            container.addEventListener('contextmenu', (e) => {
+                const card = e.target.closest('.shortcut-card');
+                if (card) {
+                    e.preventDefault();
+                    this.contextTarget = {
+                        type: 'shortcut',
+                        id: card.dataset.id
+                    };
+                    App.showContextMenu(e.clientX, e.clientY);
+                }
+            });
+        }
     },
-
-    // ... skipped bindEvents for replace targeting ...
 
     /**
      * 保存快捷方式
@@ -128,7 +184,11 @@ const Shortcuts = {
 
         const name = nameInput.value.trim();
         let url = urlInput.value.trim();
-        const icon = iconInput.value.trim() || 'auto';
+        // Check active option for type
+        const activeOption = document.querySelector('.icon-option.active');
+        const type = activeOption ? activeOption.dataset.type : 'auto';
+
+        let icon = type === 'auto' ? 'auto' : iconInput.value.trim();
 
         if (!name) {
             nameInput.focus();
@@ -140,18 +200,18 @@ const Shortcuts = {
             return;
         }
 
-        // 自动补全 https://
+        // Auto-complete https://
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             url = 'https://' + url;
         }
 
-        // 尝试预缓存图标
+        // Pre-cache icon
         if (window.ImageDB) {
             let iconUrl = icon;
             if (icon === 'auto') {
                 try {
                     const u = new URL(url);
-                    iconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
+                    iconUrl = `https://icons.duckduckgo.com/ip3/${u.hostname}.ico`;
                 } catch (e) { }
             }
 
@@ -201,6 +261,71 @@ const Shortcuts = {
             await Storage.saveShortcuts(this.shortcuts);
             this.render();
         }
+    },
+
+    /**
+     * 显示模态框
+     */
+    showModal(id = null) {
+        const modal = document.getElementById('shortcutModal');
+        const title = document.getElementById('shortcutModalTitle');
+        const idInput = document.getElementById('editShortcutId');
+        const nameInput = document.getElementById('shortcutName');
+        const urlInput = document.getElementById('shortcutUrl');
+        const iconInput = document.getElementById('shortcutIcon');
+        const iconOptions = document.querySelectorAll('.icon-option');
+
+        if (id) {
+            // 编辑模式
+            const shortcut = this.shortcuts.find(s => s.id === id);
+            if (!shortcut) return;
+
+            title.textContent = '✏️ 编辑快捷方式';
+            idInput.value = shortcut.id;
+            nameInput.value = shortcut.name;
+            urlInput.value = shortcut.url;
+
+            // 设置图标状态
+            iconOptions.forEach(opt => opt.classList.remove('active'));
+            if (shortcut.icon === 'auto' || !shortcut.icon) {
+                document.querySelector('.icon-option[data-type="auto"]').classList.add('active');
+                iconInput.style.display = 'none';
+                iconInput.value = '';
+            } else if (shortcut.icon.startsWith('http')) {
+                document.querySelector('.icon-option[data-type="custom"]').classList.add('active');
+                iconInput.style.display = 'block';
+                iconInput.value = shortcut.icon;
+                iconInput.placeholder = '图标URL';
+            } else {
+                document.querySelector('.icon-option[data-type="emoji"]').classList.add('active');
+                iconInput.style.display = 'block';
+                iconInput.value = shortcut.icon;
+                iconInput.placeholder = '输入表情符号';
+            }
+        } else {
+            // 新增模式
+            title.textContent = '➕ 添加快捷方式';
+            idInput.value = '';
+            nameInput.value = '';
+            urlInput.value = '';
+
+            // 重置图标选项
+            iconOptions.forEach(opt => opt.classList.remove('active'));
+            document.querySelector('.icon-option[data-type="auto"]').classList.add('active');
+            iconInput.style.display = 'none';
+            iconInput.value = '';
+        }
+
+        modal.classList.add('show');
+        nameInput.focus();
+    },
+
+    /**
+     * 隐藏模态框
+     */
+    hideModal() {
+        const modal = document.getElementById('shortcutModal');
+        modal.classList.remove('show');
     },
 
     /**
