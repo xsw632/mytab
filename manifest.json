@@ -5,9 +5,9 @@
   "description": "一个美观、功能丰富的新标签页扩展，支持自定义壁纸、快捷链接和分类管理",
   "author": "MyTab",
   "icons": {
-    "16": "images/icon16.svg",
-    "48": "images/icon48.svg",
-    "128": "images/icon128.svg"
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
   },
   "chrome_url_overrides": {
     "newtab": "newtab.html"
@@ -15,8 +15,8 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "images/icon16.svg",
-      "48": "images/icon48.svg"
+      "16": "images/icon16.png",
+      "48": "images/icon48.png"
     },
     "default_title": "MyTab 设置"
   },
