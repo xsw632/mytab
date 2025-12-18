@@ -51,18 +51,40 @@ const Shortcuts = {
           <span class="shortcut-name">${this.escapeHtml(shortcut.name)}</span>
         </a>
       `;
-        }).join('');
+        }).join('') + `
+      <div class="btn-add-shortcut" id="addShortcutBtn">
+        <div class="add-icon-wrapper">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </div>
+        <span>添加快捷</span>
+      </div>
+    `;
 
         // Add error event listeners and cache logic
         const shortcutImages = container.querySelectorAll('.shortcut-icon img');
         shortcutImages.forEach(img => {
             img.addEventListener('error', (e) => {
-                const parent = e.target.parentElement;
+                const target = e.target;
+                const src = target.src;
+
+                // If Google fails, try DuckDuckGo as fallback
+                if (src.includes('google.com')) {
+                    const hostname = new URL(src).searchParams.get('domain');
+                    if (hostname) {
+                        target.src = `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
+                        return;
+                    }
+                }
+
+                // If all services fail, fallback to initial letter
+                const parent = target.parentElement;
                 const shortcutId = parent.id.replace('icon-', '');
                 const shortcut = this.shortcuts.find(s => s.id === shortcutId);
 
                 if (shortcut) {
-                    e.target.style.display = 'none';
+                    target.style.display = 'none';
                     parent.innerHTML = `<span class="emoji">${shortcut.name.charAt(0).toUpperCase()}</span>`;
                 }
             });
@@ -93,10 +115,9 @@ const Shortcuts = {
      */
     getIconHtml(shortcut) {
         if (shortcut.icon === 'auto' || !shortcut.icon) {
-            // Automatic favicon using DuckDuckGo service
+            // Automatic favicon using Google service (Higher quality)
             const url = new URL(shortcut.url);
-            const faviconUrl = `https://icons.duckduckgo.com/ip3/${url.hostname}.ico`;
-            // Add data-cache mark
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
             return `<img src="${faviconUrl}" data-src="${faviconUrl}" data-cache="true" alt="${this.escapeHtml(shortcut.name)}">`;
         } else if (shortcut.icon.startsWith('http')) {
             // Custom URL
@@ -145,9 +166,12 @@ const Shortcuts = {
             });
         });
 
-        // Open Add Modal
-        addBtn?.addEventListener('click', () => {
-            this.showModal();
+        // Open Add Modal - Use delegation since the button is re-rendered
+        container?.addEventListener('click', (e) => {
+            const addBtn = e.target.closest('#addShortcutBtn');
+            if (addBtn) {
+                this.showModal();
+            }
         });
 
         // Close Modal
@@ -211,7 +235,7 @@ const Shortcuts = {
             if (icon === 'auto') {
                 try {
                     const u = new URL(url);
-                    iconUrl = `https://icons.duckduckgo.com/ip3/${u.hostname}.ico`;
+                    iconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=128`;
                 } catch (e) { }
             }
 

@@ -29,7 +29,7 @@ const Categories = {
             const shortcutCount = Shortcuts.getCountByCategory(cat.id);
             return `
         <div class="category-item ${cat.id === this.currentCategory ? 'active' : ''}" 
-             data-id="${cat.id}">
+             data-id="${cat.id}" title="${cat.name}">
           <span class="icon">${cat.icon}</span>
           <span class="name">${cat.name}</span>
           <span class="count">${shortcutCount}</span>

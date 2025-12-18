@@ -130,6 +130,7 @@ const App = {
         toggleSidebar?.addEventListener('click', async () => {
             const sidebar = document.getElementById('sidebar');
             const isCollapsed = sidebar.classList.toggle('collapsed');
+            toggleSidebar.title = isCollapsed ? '展开侧边栏' : '收起侧边栏';
             Settings.settings.showSidebar = !isCollapsed;
             await Storage.saveSettings(Settings.settings);
             document.getElementById('showSidebar').checked = !isCollapsed;
