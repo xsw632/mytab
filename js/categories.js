@@ -37,11 +37,57 @@ const Categories = {
       `;
         }).join('');
 
+        // 重新绑定拖放事件
+        const categoryItems = container.querySelectorAll('.category-item');
+        categoryItems.forEach(item => {
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                item.classList.add('drag-over');
+            });
+
+            item.addEventListener('dragleave', () => {
+                item.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                item.classList.remove('drag-over');
+
+                const shortcutId = e.dataTransfer.getData('shortcutId');
+                const targetCategoryId = item.getAttribute('data-id');
+
+                if (shortcutId && targetCategoryId) {
+                    await this.moveShortcutToCategory(shortcutId, targetCategoryId);
+                }
+            });
+        });
+
         // 更新当前分类名称
         const currentCat = this.categories.find(c => c.id === this.currentCategory);
         const nameEl = document.getElementById('currentCategoryName');
         if (nameEl && currentCat) {
             nameEl.textContent = currentCat.name;
+        }
+    },
+
+    /**
+     * 移动快捷方式到指定分类
+     */
+    async moveShortcutToCategory(shortcutId, categoryId) {
+        const index = Shortcuts.shortcuts.findIndex(s => s.id === shortcutId);
+        if (index !== -1) {
+            // 如果已经在该分类，则忽略
+            if (Shortcuts.shortcuts[index].categoryId === categoryId) return;
+
+            Shortcuts.shortcuts[index].categoryId = categoryId;
+            await Storage.saveShortcuts(Shortcuts.shortcuts);
+
+            // 重新渲染当前视图
+            Shortcuts.render();
+            this.render();
+
+            // 提示用户 (可选)
+            // console.log(`Moved shortcut ${shortcutId} to ${categoryId}`);
         }
     },
 
@@ -83,6 +129,26 @@ const Categories = {
 
         // 保存分类
         saveBtn?.addEventListener('click', () => this.save());
+
+        // Emoji category switching
+        const emojiCatBtns = modal?.querySelectorAll('.emoji-cat-btn');
+        emojiCatBtns?.forEach(btn => {
+            btn.addEventListener('click', () => {
+                emojiCatBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.renderEmojiGrid(btn.getAttribute('data-cat'));
+            });
+        });
+
+        // Emoji selection via delegation
+        const emojiGrid = document.getElementById('categoryEmojiGrid');
+        emojiGrid?.addEventListener('click', (e) => {
+            const item = e.target.closest('.emoji-item');
+            if (item) {
+                const iconInput = document.getElementById('categoryIcon');
+                if (iconInput) iconInput.value = item.textContent;
+            }
+        });
 
         // 点击遮罩关闭
         modal?.addEventListener('click', (e) => {
@@ -126,7 +192,22 @@ const Categories = {
         }
 
         modal.classList.add('show');
+        this.renderEmojiGrid('common');
         nameInput.focus();
+    },
+
+    /**
+     * 渲染表情网格
+     */
+    renderEmojiGrid(category) {
+        const grid = document.getElementById('categoryEmojiGrid');
+        if (!grid) return;
+
+        // Reuse emoji data from Shortcuts to avoid duplication
+        const emojis = Shortcuts.emojis[category] || [];
+        grid.innerHTML = emojis.map(emoji => `
+            <div class="emoji-item">${emoji}</div>
+        `).join('');
     },
 
     /**

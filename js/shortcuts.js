@@ -5,6 +5,12 @@
 const Shortcuts = {
     shortcuts: [],
     contextTarget: null,
+    emojis: {
+        common: ['⭐', '🔥', '❤️', '📍', '🏠', '💻', '🎮', '💡', '📌', '📎', '📁', '📦', '🚀', '🛠️', '⚙️', '💬'],
+        smileys: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺'],
+        nature: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷', '🕸', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿', '🦔'],
+        objects: ['⌚', '📱', '📲', '💻', '⌨️', '🖱', '🖲', '🕹', '🗜', '💽', '💾', '💿', 'DVD', '📼', '📷', '📸', '📹', '🎥', '📽', '🎞', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙', '🎚', '🎛', '🧭', '⏱', '⏲', '⏰', '🕰', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯', '🪔', '🧯', '🛢', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩺', '💊', '💉', '🩸', '🧬', '🌡️', '🧹', '🧺', '🧻', '🧼', '🧽', '🪣', '🧴', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🖼️', '🛍️', '🛒', '🎁', '🎈', '🎏', '🎀', '🎊', '🎉', '🎎', '🏮', '🎐', '🧧', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '📁', '📂', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️', '🔒', '🔓', '🔏', '🔐', '🔑', '🗝️', '🔨', '⛏️', '🛠️', '⚒️', '🔧', '🔩', '⚙️', '🗜️', '⚖️', '🦯', '🔗', '⛓️', '🧰', '🧲', '🪜', '⚗️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊', '🩺', '🚪', '🛗', '🪞', '🪟', '🛏️', '🛋️', '🪑', '🚽', '🪠', '🚿', '🛁', '🪤', '🪒', '🧴', '🧷', '🧹', '🧺', '🧻', '🧼', '🧽', '🧯', '🛒', '🚬', '⚰️', '🪦', '⚱️']
+    },
 
     /**
      * 初始化快捷方式模块
@@ -39,46 +45,115 @@ const Shortcuts = {
 
         const shortcuts = this.getCurrentShortcuts();
 
-        // Generate HTML without inline event handlers
-        container.innerHTML = shortcuts.map(shortcut => {
+        // Generate HTML
+        const shortcutsHtml = shortcuts.map(shortcut => {
             const iconHtml = this.getIconHtml(shortcut);
             return `
         <a class="shortcut-card" href="${this.escapeHtml(shortcut.url)}" 
-           data-id="${shortcut.id}" title="${this.escapeHtml(shortcut.name)}">
+           data-id="${shortcut.id}" title="${this.escapeHtml(shortcut.name)}"
+           draggable="true">
           <div class="shortcut-icon" id="icon-${shortcut.id}">
             ${iconHtml}
           </div>
           <span class="shortcut-name">${this.escapeHtml(shortcut.name)}</span>
         </a>
       `;
-        }).join('') + `
-      <div class="btn-add-shortcut" id="addShortcutBtn">
-        <div class="add-icon-wrapper">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        }).join('');
+
+        const addBtnHtml = `
+      <div class="shortcut-card btn-add-shortcut" id="addShortcutBtn">
+        <div class="shortcut-icon" style="border: 2px dashed rgba(255,255,255,0.2); background: transparent;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity: 0.5;">
             <path d="M12 5v14M5 12h14" />
           </svg>
         </div>
-        <span>添加快捷</span>
+        <span class="shortcut-name">添加快捷</span>
       </div>
     `;
 
-        // Add error event listeners and cache logic
+        container.innerHTML = shortcutsHtml + addBtnHtml;
+
+        // Re-bind events for shortcuts
+        const shortcutCards = container.querySelectorAll('.shortcut-card:not(.btn-add-shortcut)');
+        shortcutCards.forEach(card => {
+            // Drag and Drop
+            card.addEventListener('dragstart', (e) => {
+                const id = card.getAttribute('data-id');
+                e.dataTransfer.setData('shortcutId', id);
+                card.classList.add('dragging');
+
+                // Set ghost image or just visual state
+                setTimeout(() => card.style.opacity = '0.5', 0);
+            });
+
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                card.style.opacity = '1';
+
+                // Clear all category highlights
+                document.querySelectorAll('.category-item').forEach(item => {
+                    item.classList.remove('drag-over');
+                });
+            });
+
+            // Context Menu
+            card.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.contextTarget = card.getAttribute('data-id');
+                const menu = document.getElementById('contextMenu');
+                if (menu) {
+                    menu.style.left = `${e.pageX}px`;
+                    menu.style.top = `${e.pageY}px`;
+                    menu.classList.add('show');
+                }
+            });
+        });
+
+        // Add Button
+        const addBtn = document.getElementById('addShortcutBtn');
+        addBtn?.addEventListener('click', () => {
+            this.showModal();
+        });
+
+        // Error event listeners for images
         const shortcutImages = container.querySelectorAll('.shortcut-icon img');
         shortcutImages.forEach(img => {
             img.addEventListener('error', (e) => {
                 const target = e.target;
                 const src = target.src;
 
-                // If Google fails, try DuckDuckGo as fallback
-                if (src.includes('google.com')) {
-                    const hostname = new URL(src).searchParams.get('domain');
-                    if (hostname) {
+                try {
+                    const iconUrl = new URL(src);
+                    let hostname = '';
+
+                    const getBaseDomain = (host) => {
+                        const parts = host.split('.');
+                        if (parts.length > 2) return parts.slice(-2).join('.');
+                        return host;
+                    };
+
+                    if (src.includes('google.com') && src.includes('sz=128')) {
+                        hostname = iconUrl.searchParams.get('domain');
+                        const baseDomain = getBaseDomain(hostname);
+                        if (hostname && baseDomain !== hostname) {
+                            target.src = `https://www.google.com/s2/favicons?domain=${baseDomain}&sz=128`;
+                            return;
+                        }
                         target.src = `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
                         return;
                     }
-                }
 
-                // If all services fail, fallback to initial letter
+                    if (src.includes('duckduckgo.com')) {
+                        const pathParts = iconUrl.pathname.split('/');
+                        hostname = pathParts[pathParts.length - 1].replace('.ico', '');
+                        const baseDomain = getBaseDomain(hostname);
+                        if (hostname && baseDomain !== hostname) {
+                            target.src = `https://icons.duckduckgo.com/ip3/${baseDomain}.ico`;
+                            return;
+                        }
+                    }
+                } catch (err) { }
+
                 const parent = target.parentElement;
                 const shortcutId = parent.id.replace('icon-', '');
                 const shortcut = this.shortcuts.find(s => s.id === shortcutId);
@@ -106,7 +181,6 @@ const Shortcuts = {
             }
         }
 
-        // Update counts
         Categories.render();
     },
 
@@ -140,30 +214,48 @@ const Shortcuts = {
         const saveBtn = document.getElementById('saveShortcut');
         const iconOptions = document.querySelectorAll('.icon-option');
         const iconInput = document.getElementById('shortcutIcon');
+        const emojiPicker = document.getElementById('emojiPicker');
 
-        // Toggle icon options
+        // Icon options switching
         iconOptions.forEach(option => {
             option.addEventListener('click', () => {
                 iconOptions.forEach(opt => opt.classList.remove('active'));
                 option.classList.add('active');
 
-                const type = option.dataset.type;
+                const type = option.getAttribute('data-type');
                 if (type === 'auto') {
                     iconInput.style.display = 'none';
-                    iconInput.value = '';
-                } else {
+                    emojiPicker.style.display = 'none';
+                } else if (type === 'custom') {
                     iconInput.style.display = 'block';
-                    iconInput.placeholder = type === 'custom' ? '图标URL' : '输入表情符号';
-                    if (type === 'custom') {
-                        // Keep value if it's already a URL
-                        if (!iconInput.value.startsWith('http')) iconInput.value = '';
-                    } else {
-                        // Keep value if it's already an emoji (simple check)
-                        if (iconInput.value.startsWith('http')) iconInput.value = '';
-                    }
-                    iconInput.focus();
+                    iconInput.placeholder = '输入图片 URL...';
+                    emojiPicker.style.display = 'none';
+                } else { // emoji
+                    iconInput.style.display = 'block';
+                    iconInput.placeholder = '输入或选择表情符号...';
+                    emojiPicker.style.display = 'block';
+                    this.renderEmojiGrid('common');
                 }
             });
+        });
+
+        // Emoji category switching
+        const emojiCatBtns = document.querySelectorAll('.emoji-cat-btn');
+        emojiCatBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                emojiCatBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.renderEmojiGrid(btn.getAttribute('data-cat'));
+            });
+        });
+
+        // Emoji selection via delegation
+        const emojiGrid = document.getElementById('emojiGrid');
+        emojiGrid?.addEventListener('click', (e) => {
+            const item = e.target.closest('.emoji-item');
+            if (item) {
+                iconInput.value = item.textContent;
+            }
         });
 
         // Open Add Modal - Use delegation since the button is re-rendered
@@ -195,6 +287,19 @@ const Shortcuts = {
                 }
             });
         }
+    },
+
+    /**
+     * 渲染表情网格
+     */
+    renderEmojiGrid(category) {
+        const grid = document.getElementById('emojiGrid');
+        if (!grid) return;
+
+        const emojis = this.emojis[category] || [];
+        grid.innerHTML = emojis.map(emoji => `
+            <div class="emoji-item">${emoji}</div>
+        `).join('');
     },
 
     /**
@@ -293,41 +398,50 @@ const Shortcuts = {
     showModal(id = null) {
         const modal = document.getElementById('shortcutModal');
         const title = document.getElementById('shortcutModalTitle');
-        const idInput = document.getElementById('editShortcutId');
         const nameInput = document.getElementById('shortcutName');
         const urlInput = document.getElementById('shortcutUrl');
         const iconInput = document.getElementById('shortcutIcon');
+        const idInput = document.getElementById('editShortcutId');
         const iconOptions = document.querySelectorAll('.icon-option');
+        const emojiPicker = document.getElementById('emojiPicker');
+
+        // Reset
+        nameInput.value = '';
+        urlInput.value = '';
+        iconInput.value = '';
+        idInput.value = '';
+        iconOptions.forEach(opt => opt.classList.remove('active'));
+        document.querySelector('.icon-option[data-type="auto"]').classList.add('active'); // Default to auto
+        iconInput.style.display = 'none';
+        emojiPicker.style.display = 'none';
 
         if (id) {
-            // 编辑模式
             const shortcut = this.shortcuts.find(s => s.id === id);
-            if (!shortcut) return;
+            if (shortcut) {
+                title.textContent = '✏️ 编辑快捷方式';
+                nameInput.value = shortcut.name;
+                urlInput.value = shortcut.url;
+                idInput.value = shortcut.id;
 
-            title.textContent = '✏️ 编辑快捷方式';
-            idInput.value = shortcut.id;
-            nameInput.value = shortcut.name;
-            urlInput.value = shortcut.url;
-
-            // 设置图标状态
-            iconOptions.forEach(opt => opt.classList.remove('active'));
-            if (shortcut.icon === 'auto' || !shortcut.icon) {
-                document.querySelector('.icon-option[data-type="auto"]').classList.add('active');
-                iconInput.style.display = 'none';
-                iconInput.value = '';
-            } else if (shortcut.icon.startsWith('http')) {
-                document.querySelector('.icon-option[data-type="custom"]').classList.add('active');
-                iconInput.style.display = 'block';
-                iconInput.value = shortcut.icon;
-                iconInput.placeholder = '图标URL';
-            } else {
-                document.querySelector('.icon-option[data-type="emoji"]').classList.add('active');
-                iconInput.style.display = 'block';
-                iconInput.value = shortcut.icon;
-                iconInput.placeholder = '输入表情符号';
+                iconOptions.forEach(opt => opt.classList.remove('active'));
+                if (shortcut.icon === 'auto' || !shortcut.icon) {
+                    document.querySelector('.icon-option[data-type="auto"]').classList.add('active');
+                    iconInput.style.display = 'none';
+                    emojiPicker.style.display = 'none';
+                } else if (shortcut.icon.startsWith('http')) {
+                    document.querySelector('.icon-option[data-type="custom"]').classList.add('active');
+                    iconInput.value = shortcut.icon;
+                    iconInput.style.display = 'block';
+                    emojiPicker.style.display = 'none';
+                } else { // Emoji
+                    document.querySelector('.icon-option[data-type="emoji"]').classList.add('active');
+                    iconInput.value = shortcut.icon;
+                    iconInput.style.display = 'block';
+                    emojiPicker.style.display = 'block';
+                    this.renderEmojiGrid('common'); // Render common emojis by default
+                }
             }
         } else {
-            // 新增模式
             title.textContent = '➕ 添加快捷方式';
             idInput.value = '';
             nameInput.value = '';

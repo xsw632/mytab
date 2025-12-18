@@ -218,6 +218,17 @@
             </div>
           </div>
           <input type="text" id="shortcutIcon" placeholder="图标URL或表情符号" style="display:none;">
+          <div id="emojiPicker" class="emoji-picker" style="display:none;">
+            <div class="emoji-categories">
+              <span class="emoji-cat-btn active" data-cat="common">常用</span>
+              <span class="emoji-cat-btn" data-cat="smileys">表情</span>
+              <span class="emoji-cat-btn" data-cat="nature">自然</span>
+              <span class="emoji-cat-btn" data-cat="objects">物品</span>
+            </div>
+            <div class="emoji-grid" id="emojiGrid">
+              <!-- Emojis will be inserted here by JS -->
+            </div>
+          </div>
         </div>
         <div class="form-actions">
           <button class="btn-secondary" id="cancelShortcut">取消</button>
@@ -247,6 +258,17 @@
         <div class="form-group">
           <label for="categoryIcon">图标 (表情符号):</label>
           <input type="text" id="categoryIcon" placeholder="例如：💼" maxlength="2">
+          <div id="categoryEmojiPicker" class="emoji-picker" style="margin-top: 10px;">
+            <div class="emoji-categories">
+              <span class="emoji-cat-btn active" data-cat="common">常用</span>
+              <span class="emoji-cat-btn" data-cat="smileys">表情</span>
+              <span class="emoji-cat-btn" data-cat="nature">自然</span>
+              <span class="emoji-cat-btn" data-cat="objects">物品</span>
+            </div>
+            <div class="emoji-grid" id="categoryEmojiGrid">
+              <!-- Emojis will be inserted here by JS -->
+            </div>
+          </div>
         </div>
         <div class="form-actions">
           <button class="btn-secondary" id="cancelCategory">取消</button>
