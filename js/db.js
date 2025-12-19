@@ -5,20 +5,25 @@ const ImageDB = {
     dbName: 'MyTabAssets',
     storeName: 'images',
     db: null,
+    initPromise: null,
 
     /**
      * Initialize the database
      */
     async init() {
-        return new Promise((resolve, reject) => {
+        if (this.initPromise) return this.initPromise;
+
+        this.initPromise = new Promise((resolve, reject) => {
+            console.log('[ImageDB] Opening database...');
             const request = indexedDB.open(this.dbName, 1);
 
             request.onerror = (event) => {
-                console.error('IndexedDB error:', event.target.error);
+                console.error('[ImageDB] IndexedDB error:', event.target.error);
                 reject(event.target.error);
             };
 
             request.onupgradeneeded = (event) => {
+                console.log('[ImageDB] Upgrading database...');
                 const db = event.target.result;
                 if (!db.objectStoreNames.contains(this.storeName)) {
                     db.createObjectStore(this.storeName);
@@ -27,10 +32,11 @@ const ImageDB = {
 
             request.onsuccess = (event) => {
                 this.db = event.target.result;
-                console.log('ImageDB initialized');
+                console.log('[ImageDB] Database initialized successfully');
                 resolve();
             };
         });
+        return this.initPromise;
     },
 
     /**
@@ -40,13 +46,42 @@ const ImageDB = {
      */
     async saveImage(key, blob) {
         if (!this.db) await this.init();
+        console.log(`[ImageDB] Saving image: ${key}, size: ${blob.size} bytes, type: ${blob.type}`);
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([this.storeName], 'readwrite');
             const store = transaction.objectStore(this.storeName);
             const request = store.put(blob, key);
 
-            request.onsuccess = () => resolve();
-            request.onerror = (e) => reject(e.target.error);
+            request.onsuccess = () => {
+                console.log(`[ImageDB] Successfully saved: ${key}`);
+                resolve(key);
+            };
+            request.onerror = (e) => {
+                console.error(`[ImageDB] Failed to save ${key}:`, e.target.error);
+                reject(e.target.error);
+            };
+        });
+    },
+
+    /**
+     * Delete an image from the database
+     * @param {string} key 
+     */
+    async deleteImage(key) {
+        if (!this.db) await this.init();
+        console.log(`[ImageDB] Deleting image: ${key}`);
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([this.storeName], 'readwrite');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.delete(key);
+            request.onsuccess = () => {
+                console.log(`[ImageDB] Successfully deleted: ${key}`);
+                resolve();
+            };
+            request.onerror = (e) => {
+                console.error(`[ImageDB] Failed to delete ${key}:`, e.target.error);
+                reject(e.target.error);
+            };
         });
     },
 
@@ -57,15 +92,26 @@ const ImageDB = {
      */
     async getImage(key) {
         if (!this.db) await this.init();
+        // console.log(`[ImageDB] Fetching image: ${key}`);
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([this.storeName], 'readonly');
             const store = transaction.objectStore(this.storeName);
             const request = store.get(key);
 
             request.onsuccess = (event) => {
-                resolve(event.target.result || null);
+                const result = event.target.result;
+                if (result) {
+                    console.log(`[ImageDB] Found image: ${key}, size: ${result.size}`);
+                    resolve(result);
+                } else {
+                    console.warn(`[ImageDB] Image not found: ${key}`);
+                    resolve(null);
+                }
             };
-            request.onerror = (e) => reject(e.target.error);
+            request.onerror = (e) => {
+                console.error(`[ImageDB] Error fetching ${key}:`, e.target.error);
+                reject(e.target.error);
+            };
         });
     },
 
@@ -76,6 +122,7 @@ const ImageDB = {
      */
     async getOrFetch(url) {
         if (!url) return '';
+        if (url.startsWith('blob:')) return url;
 
         // Try to get from DB first
         try {
@@ -89,9 +136,16 @@ const ImageDB = {
         }
 
         // Fetch from network
+        if (url.startsWith('local-')) {
+            // If it's a local- key, we've already tried getImage(url) above.
+            // If we're here, it means getImage(url) returned null or failed.
+            return null;
+        }
+
         try {
             console.log('Fetching from network:', url);
             const response = await fetch(url);
+            if (!response.ok) throw new Error('Network response was not ok');
             const blob = await response.blob();
 
             // Save to DB in background

@@ -216,8 +216,17 @@
             <div class="icon-option" data-type="emoji">
               <span>😀 表情符号</span>
             </div>
+            <div class="icon-option" data-type="upload">
+              <span>📤 本地上传</span>
+            </div>
           </div>
+          <div id="iconCandidates" class="icon-candidates" style="display:none;"></div>
           <input type="text" id="shortcutIcon" placeholder="图标URL或表情符号" style="display:none;">
+          <input type="file" id="iconUploadInput" accept="image/*" style="display:none;">
+          <div id="uploadPreview" class="upload-preview" style="display:none;">
+            <img src="" alt="预览">
+            <span id="removeUpload">移除</span>
+          </div>
           <div id="emojiPicker" class="emoji-picker" style="display:none;">
             <div class="emoji-categories">
               <span class="emoji-cat-btn active" data-cat="common">常用</span>
