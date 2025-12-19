@@ -502,6 +502,7 @@ const Shortcuts = {
             }
         }
 
+        // 保存时预缓存图标到 IndexedDB
         if (window.ImageDB && (type === 'auto' || type === 'custom')) {
             let iconUrl = icon;
             if (icon === 'auto') {
@@ -511,8 +512,19 @@ const Shortcuts = {
                 } catch (e) { }
             }
 
-            if (iconUrl.startsWith('http') || iconUrl.startsWith('local-')) {
-                ImageDB.getOrFetch(iconUrl).catch(console.error);
+            if (iconUrl.startsWith('http')) {
+                // 强制从网络获取并缓存
+                try {
+                    console.log(`[Shortcuts] Caching icon: ${iconUrl}`);
+                    const response = await fetch(iconUrl);
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        await ImageDB.saveImage(iconUrl, blob);
+                        console.log(`[Shortcuts] Icon cached successfully: ${iconUrl}`);
+                    }
+                } catch (e) {
+                    console.warn(`[Shortcuts] Failed to cache icon: ${iconUrl}`, e);
+                }
             }
         }
 
