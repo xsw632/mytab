@@ -8,7 +8,11 @@ const App = {
      */
     async init() {
         // 初始化 DB
-        if (window.ImageDB) await ImageDB.init();
+        if (window.ImageDB) {
+            await ImageDB.init();
+            // 迁移：缓存现有快捷方式的图标（只运行一次）
+            ImageDB.migrateExistingIcons();
+        }
 
         // 初始化各模块
         await Categories.init();

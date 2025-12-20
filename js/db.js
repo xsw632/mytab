@@ -160,7 +160,7 @@ const ImageDB = {
 
     /**
      * Fetch and save URL in background (fire and forget)
-     * @param {string} url 
+     * @param {string} url
      */
     async saveFromUrl(url) {
         if (!url) return;
@@ -176,5 +176,92 @@ const ImageDB = {
         } catch (e) {
             console.warn('Background cache failed:', e);
         }
+    },
+
+    /**
+     * 迁移：缓存所有现有快捷方式的图标
+     * 只在联网时运行一次
+     */
+    async migrateExistingIcons() {
+        const MIGRATION_KEY = 'iconMigrationDone_v1';
+
+        // 检查是否已经迁移过
+        const migrationStatus = await chrome.storage.local.get(MIGRATION_KEY);
+        if (migrationStatus[MIGRATION_KEY]) {
+            console.log('[ImageDB] Migration already done, skipping...');
+            return;
+        }
+
+        // 检查是否联网
+        if (!navigator.onLine) {
+            console.log('[ImageDB] Offline, skipping migration...');
+            return;
+        }
+
+        console.log('[ImageDB] Starting icon migration...');
+
+        try {
+            const data = await chrome.storage.local.get('shortcuts');
+            const shortcuts = data.shortcuts || [];
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const s of shortcuts) {
+                let iconUrl = s.icon;
+
+                // 处理 auto 类型
+                if (iconUrl === 'auto' || !iconUrl) {
+                    try {
+                        let urlStr = s.url;
+                        if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr;
+                        const u = new URL(urlStr);
+                        iconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=128`;
+                    } catch (e) {
+                        continue;
+                    }
+                }
+
+                // 跳过非 http 图标 (emoji, local- 等)
+                if (!iconUrl.startsWith('http')) {
+                    continue;
+                }
+
+                // 检查是否已缓存
+                const existing = await this.getImage(iconUrl);
+                if (existing) {
+                    console.log(`[ImageDB] Already cached: ${s.name}`);
+                    successCount++;
+                    continue;
+                }
+
+                // 从网络获取并缓存
+                try {
+                    console.log(`[ImageDB] Caching icon for ${s.name}: ${iconUrl}`);
+                    const response = await fetch(iconUrl);
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        await this.saveImage(iconUrl, blob);
+                        console.log(`[ImageDB] Cached: ${s.name}`);
+                        successCount++;
+                    } else {
+                        console.warn(`[ImageDB] Failed to fetch ${s.name}: ${response.status}`);
+                        failCount++;
+                    }
+                } catch (e) {
+                    console.warn(`[ImageDB] Error caching ${s.name}:`, e.message);
+                    failCount++;
+                }
+            }
+
+            console.log(`[ImageDB] Migration complete! Success: ${successCount}, Failed: ${failCount}`);
+
+            // 标记迁移完成
+            await chrome.storage.local.set({ [MIGRATION_KEY]: true });
+        } catch (e) {
+            console.error('[ImageDB] Migration failed:', e);
+        }
     }
 };
+
+// 挂载到 window 以便其他脚本访问
+window.ImageDB = ImageDB;

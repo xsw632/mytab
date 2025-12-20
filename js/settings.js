@@ -132,21 +132,39 @@ const Settings = {
             overlayEl.style.background = 'rgba(255, 255, 255, 0)';
 
             let finalUrl = wpUrl;
+            let fromCache = false;
 
             // 尝试从缓存获取 Blob
             if (window.ImageDB) {
                 try {
                     const blob = await ImageDB.getImage(wpUrl);
                     if (blob) {
-                        console.log('Cache hit for wallpaper');
+                        console.log('Wallpaper cache hit');
                         finalUrl = URL.createObjectURL(blob);
-                    } else if (wpUrl.startsWith('http')) {
-                        console.log('Cache miss, downloading in background');
-                        // 后台下载缓存 (不阻塞当前显示)
-                        ImageDB.saveFromUrl(wpUrl);
+                        fromCache = true;
+                    } else if (wpUrl.startsWith('http') && navigator.onLine) {
+                        // 没有缓存且联网，下载并缓存
+                        console.log('Wallpaper cache miss, downloading...');
+                        try {
+                            const response = await fetch(wpUrl);
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                await ImageDB.saveImage(wpUrl, blob);
+                                finalUrl = URL.createObjectURL(blob);
+                                fromCache = true;
+                                console.log('Wallpaper cached successfully');
+                            }
+                        } catch (e) {
+                            console.warn('Failed to download wallpaper:', e);
+                        }
+                    } else if (!navigator.onLine) {
+                        // 离线且没有缓存，使用默认背景
+                        console.log('Offline and no cached wallpaper, using default');
+                        overlayEl.style.background = 'rgba(248, 250, 252, 0.95)';
+                        return;
                     }
                 } catch (e) {
-                    console.error('Cache check failed:', e);
+                    console.error('Wallpaper cache check failed:', e);
                 }
             }
 

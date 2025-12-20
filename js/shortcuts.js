@@ -18,8 +18,83 @@ const Shortcuts = {
     async init() {
         const data = await Storage.getAll();
         this.shortcuts = data.shortcuts;
+        // Ensure DB is ready before render if possible
+        if (window.ImageDB) await ImageDB.init();
         await this.render();
         this.bindEvents();
+    },
+
+    /**
+     * Helper: Generate consistent cache key for a shortcut
+     * 规范化 hostname，确保缓存 key 一致
+     */
+    getIconCacheKey(shortcut) {
+        if (shortcut.icon === 'auto' || !shortcut.icon) {
+            try {
+                // Ensure valid URL before parsing
+                let urlStr = shortcut.url;
+                if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr;
+                const u = new URL(urlStr);
+                // 规范化：保留原始 hostname（包括 www.）
+                // 用户输入的 URL 是什么就用什么
+                return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=128`;
+            } catch (e) {
+                console.warn('[Shortcuts] Invalid URL for key generation:', shortcut.url);
+                return null;
+            }
+        }
+        return shortcut.icon; // Custom URL or local-ID
+    },
+
+    /**
+     * 尝试多种 key 格式查找缓存
+     */
+    async findCachedIcon(shortcut) {
+        if (typeof ImageDB === 'undefined') return null;
+
+        // 确保 ImageDB 已初始化
+        await ImageDB.init();
+
+        const primaryKey = this.getIconCacheKey(shortcut);
+        if (!primaryKey) return null;
+
+        // 跳过非网络图标
+        if (!primaryKey.startsWith('http')) {
+            // local- 图标直接查找
+            if (primaryKey.startsWith('local-')) {
+                const blob = await ImageDB.getImage(primaryKey);
+                return blob ? { blob, key: primaryKey } : null;
+            }
+            return null;
+        }
+
+        // 尝试主 key
+        let blob = await ImageDB.getImage(primaryKey);
+        if (blob) return { blob, key: primaryKey };
+
+        // 尝试添加/移除 www. 前缀
+        try {
+            const url = new URL(primaryKey);
+            const domain = url.searchParams.get('domain');
+            if (domain) {
+                let altDomain;
+                if (domain.startsWith('www.')) {
+                    altDomain = domain.substring(4); // 移除 www.
+                } else {
+                    altDomain = 'www.' + domain; // 添加 www.
+                }
+                const altKey = `https://www.google.com/s2/favicons?domain=${altDomain}&sz=128`;
+                blob = await ImageDB.getImage(altKey);
+                if (blob) {
+                    console.log(`[Shortcuts] Found cache with alt key: ${altKey}`);
+                    return { blob, key: altKey };
+                }
+            }
+        } catch (e) {
+            console.warn('[Shortcuts] Error trying alt keys:', e);
+        }
+
+        return null;
     },
 
     /**
@@ -45,34 +120,45 @@ const Shortcuts = {
 
         const shortcuts = this.getCurrentShortcuts();
 
-        // 1. Pre-resolve cached icons to avoid race conditions offline
+        // 1. Pre-resolve cached icons - 使用 findCachedIcon 尝试多种 key 格式
         const cachedIcons = {};
-        if (window.ImageDB) {
-            await Promise.all(shortcuts.map(async (s) => {
-                let url = s.icon;
-                if (s.icon === 'auto' || !s.icon) {
-                    try {
-                        url = `https://www.google.com/s2/favicons?domain=${new URL(s.url).hostname}&sz=128`;
-                    } catch (e) {
-                        return;
-                    }
-                }
+        let needsSave = false;
 
-                if (url && (url.startsWith('http') || url.startsWith('local-'))) {
-                    try {
-                        console.log(`[Shortcuts] Pre-resolving icon for ${s.id}: ${url}`);
-                        const blob = await ImageDB.getImage(url);
-                        if (blob) {
-                            cachedIcons[s.id] = URL.createObjectURL(blob);
-                            console.log(`[Shortcuts] Pre-resolved ${s.id} to blob URL`);
-                        } else {
-                            console.warn(`[Shortcuts] No cached blob found for ${s.id} (${url})`);
+        if (window.ImageDB) {
+            // 确保 ImageDB 初始化完成
+            await ImageDB.init();
+            console.log('[Shortcuts] Checking cached icons...');
+            await Promise.all(shortcuts.map(async (s) => {
+                const cacheKey = this.getIconCacheKey(s);
+                if (!cacheKey) return;
+
+                // Skip emojis
+                if (!cacheKey.startsWith('http') && !cacheKey.startsWith('local-')) return;
+
+                try {
+                    // 使用 findCachedIcon 尝试多种 key
+                    const result = await this.findCachedIcon(s);
+                    if (result) {
+                        const blob = result.blob || result;
+                        cachedIcons[s.id] = URL.createObjectURL(blob);
+                        if (!s.iconCached) {
+                            s.iconCached = true;
+                            needsSave = true;
+                            console.log(`[Shortcuts] Marked ${s.name} as cached`);
                         }
-                    } catch (e) {
-                        console.warn('Cache pre-read failed for', s.id, e);
+                    } else if (s.iconCached) {
+                        s.iconCached = false;
+                        needsSave = true;
+                        console.log(`[Shortcuts] Cache missing for ${s.name}, cleared flag`);
                     }
+                } catch (e) {
+                    console.warn('[Shortcuts] Cache check failed for', s.name, e);
                 }
             }));
+
+            if (needsSave) {
+                await Storage.saveShortcuts(this.shortcuts);
+            }
         }
 
         // 2. Generate HTML with pre-resolved icons
@@ -217,38 +303,63 @@ const Shortcuts = {
             });
         });
 
-        // 4. Secondary background fetching for icons that didn't have cache
-        if (window.ImageDB) {
+        // 4. 异步加载未缓存的图标（只在联网时）
+        if (window.ImageDB && navigator.onLine) {
             for (const shortcut of shortcuts) {
                 const iconContainer = document.getElementById(`icon-${shortcut.id}`);
                 const img = iconContainer?.querySelector('img');
-                if (img && (!img.src || img.src.startsWith('http') || img.src.startsWith('data:') || img.src === window.location.href)) {
-                    const url = img.getAttribute('data-src') || shortcut.icon;
-                    if (url && url !== 'auto' && (url.startsWith('http') || url.startsWith('local-'))) {
-                        ImageDB.getOrFetch(url).then(blobUrl => {
-                            if (blobUrl && blobUrl !== url) {
-                                console.log(`[Shortcuts] Successfully resolved blob for ${url}`);
-                                img.src = blobUrl;
-                            } else if (url.startsWith('local-')) {
-                                console.warn(`[Shortcuts] Failed to resolve local icon ${url}, triggering fallback`);
-                                this.showTextFallback(img);
-                            } else {
-                                console.log(`[Shortcuts] No cached blob for ${url}, using original URL`);
-                            }
-                        }).catch(e => {
-                            console.error(`[Shortcuts] Error resolving ${url}:`, e);
-                            if (url.startsWith('local-')) this.showTextFallback(img);
-                        });
-                    } else if (shortcut.icon === 'auto') {
-                        // Special handling for auto favicon
-                        try {
-                            const u = new URL(shortcut.url);
-                            const faviconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=128`;
-                            ImageDB.getOrFetch(faviconUrl).then(blobUrl => {
-                                if (blobUrl && blobUrl !== faviconUrl) img.src = blobUrl;
-                            }).catch(console.error);
-                        } catch (e) { }
+
+                // 只处理需要加载的图标
+                if (img && img.dataset.needFetch === 'true') {
+                    const url = img.getAttribute('data-src');
+                    if (!url) continue;
+
+                    if (url.startsWith('local-')) {
+                        // 本地图标应该已经从缓存加载，如果到这里说明缓存丢失
+                        console.warn(`[Shortcuts] Local icon missing from cache: ${url}`);
+                        this.showTextFallback(img);
+                        continue;
                     }
+
+                    // 从网络获取并缓存
+                    console.log(`[Shortcuts] Fetching icon from network: ${url}`);
+                    try {
+                        const response = await fetch(url);
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            await ImageDB.saveImage(url, blob);
+
+                            // 更新 shortcut 的缓存标记
+                            shortcut.iconCached = true;
+
+                            // 更新图片
+                            const blobUrl = URL.createObjectURL(blob);
+                            img.src = blobUrl;
+                            img.dataset.cached = 'true';
+                            delete img.dataset.needFetch;
+
+                            console.log(`[Shortcuts] Icon fetched and cached: ${shortcut.name}`);
+                        } else {
+                            console.warn(`[Shortcuts] Failed to fetch icon: ${url}, status: ${response.status}`);
+                            this.showTextFallback(img);
+                        }
+                    } catch (e) {
+                        console.warn(`[Shortcuts] Network error fetching icon: ${url}`, e);
+                        this.showTextFallback(img);
+                    }
+                }
+            }
+
+            // 保存缓存标记更新
+            await Storage.saveShortcuts(this.shortcuts);
+        } else if (!navigator.onLine) {
+            // 离线时，对未缓存的图标显示文字回退
+            for (const shortcut of shortcuts) {
+                const iconContainer = document.getElementById(`icon-${shortcut.id}`);
+                const img = iconContainer?.querySelector('img');
+                if (img && img.dataset.needFetch === 'true') {
+                    console.log(`[Shortcuts] Offline, showing fallback for: ${shortcut.name}`);
+                    this.showTextFallback(img);
                 }
             }
         }
@@ -273,21 +384,39 @@ const Shortcuts = {
 
     /**
      * 获取图标 HTML
+     * @param {Object} shortcut - 快捷方式对象
+     * @param {string|null} preResolvedUrl - 预解析的 blob URL (来自缓存)
      */
     getIconHtml(shortcut, preResolvedUrl = null) {
+        const isCached = !!preResolvedUrl;
+
         if (shortcut.icon === 'auto' || !shortcut.icon) {
-            // Automatic favicon using Google service (Higher quality)
-            const url = new URL(shortcut.url);
-            const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
-            return `<img src="${preResolvedUrl || faviconUrl}" data-src="${faviconUrl}" data-cache="true" alt="${this.escapeHtml(shortcut.name)}">`;
+            // 自动 favicon
+            const cacheKey = this.getIconCacheKey(shortcut);
+            if (isCached) {
+                // 有缓存，直接使用 blob URL
+                return `<img src="${preResolvedUrl}" data-src="${cacheKey}" data-cached="true" alt="${this.escapeHtml(shortcut.name)}">`;
+            } else {
+                // 没有缓存，使用占位符，等待后续异步加载
+                // 不直接使用网络 URL，避免离线时报错
+                return `<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-src="${cacheKey}" data-cached="false" data-need-fetch="true" alt="${this.escapeHtml(shortcut.name)}">`;
+            }
         } else if (shortcut.icon.startsWith('http')) {
-            // Custom URL
-            return `<img src="${preResolvedUrl || shortcut.icon}" data-src="${shortcut.icon}" data-cache="true" alt="${this.escapeHtml(shortcut.name)}">`;
+            // 自定义 URL 图标
+            if (isCached) {
+                return `<img src="${preResolvedUrl}" data-src="${shortcut.icon}" data-cached="true" alt="${this.escapeHtml(shortcut.name)}">`;
+            } else {
+                // 没有缓存，使用占位符
+                return `<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-src="${shortcut.icon}" data-cached="false" data-need-fetch="true" alt="${this.escapeHtml(shortcut.name)}">`;
+            }
         } else if (shortcut.icon.startsWith('local-')) {
-            // Local uploaded icon
-            // Use an empty src or a transparent pixel if no pre-resolved URL to avoid immediate 'error' event
-            const src = preResolvedUrl || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-            return `<img src="${src}" data-src="${shortcut.icon}" data-cache="true" alt="${this.escapeHtml(shortcut.name)}">`;
+            // 本地上传图标
+            if (isCached) {
+                return `<img src="${preResolvedUrl}" data-src="${shortcut.icon}" data-cached="true" alt="${this.escapeHtml(shortcut.name)}">`;
+            } else {
+                // 本地图标必须从缓存加载，使用占位符
+                return `<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-src="${shortcut.icon}" data-cached="false" data-need-fetch="true" alt="${this.escapeHtml(shortcut.name)}">`;
+            }
         } else {
             // Emoji
             return `<span class="emoji">${shortcut.icon}</span>`;
@@ -503,29 +632,33 @@ const Shortcuts = {
         }
 
         // 保存时预缓存图标到 IndexedDB
+        let iconCached = false;
         if (window.ImageDB && (type === 'auto' || type === 'custom')) {
-            let iconUrl = icon;
-            if (icon === 'auto') {
-                try {
-                    const u = new URL(url);
-                    iconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=128`;
-                } catch (e) { }
-            }
+            // Reconstruct temp shortcut object to use helper
+            const tempShortcut = {
+                url: url,
+                icon: (type === 'auto' || !icon) ? 'auto' : icon
+            };
+            const iconUrl = this.getIconCacheKey(tempShortcut);
 
-            if (iconUrl.startsWith('http')) {
+            if (iconUrl && iconUrl.startsWith('http')) {
                 // 强制从网络获取并缓存
                 try {
-                    console.log(`[Shortcuts] Caching icon: ${iconUrl}`);
+                    console.log(`[Shortcuts] Saving/Caching icon: ${iconUrl}`);
                     const response = await fetch(iconUrl);
                     if (response.ok) {
                         const blob = await response.blob();
                         await ImageDB.saveImage(iconUrl, blob);
+                        iconCached = true;
                         console.log(`[Shortcuts] Icon cached successfully: ${iconUrl}`);
                     }
                 } catch (e) {
                     console.warn(`[Shortcuts] Failed to cache icon: ${iconUrl}`, e);
                 }
             }
+        } else if (type === 'upload') {
+            // 本地上传的图标已经保存到 IndexedDB
+            iconCached = true;
         }
 
         if (idInput.value) {
@@ -539,6 +672,7 @@ const Shortcuts = {
                 this.shortcuts[index].name = name;
                 this.shortcuts[index].url = url;
                 this.shortcuts[index].icon = icon;
+                this.shortcuts[index].iconCached = iconCached;
             }
         } else {
             this.shortcuts.push({
@@ -546,6 +680,7 @@ const Shortcuts = {
                 name,
                 url,
                 icon,
+                iconCached,
                 categoryId: Categories.currentCategory
             });
         }
