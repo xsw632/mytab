@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "MyTab - 新标签页",
+  "name": "__MSG_extName__",
   "version": "1.4.0",
-  "description": "一个美观、功能丰富的新标签页扩展，支持自定义壁纸、快捷链接和分类管理",
+  "description": "__MSG_extDescription__",
   "author": "MyTab",
+  "default_locale": "en",
   "icons": {
     "16": "images/icon16.png",
     "48": "images/icon48.png",
@@ -18,7 +19,7 @@
       "16": "images/icon16.png",
       "48": "images/icon48.png"
     },
-    "default_title": "MyTab 设置"
+    "default_title": "__MSG_actionTitle__"
   },
   "permissions": [
     "storage"
@@ -26,9 +27,9 @@
   "host_permissions": [
     "https://www.google.com/*",
     "https://icons.duckduckgo.com/*",
-    "https://api.faviconkit.com/*",
-    "https://favicongrabber.com/*",
-    "https://*/*"
+    "https://images.unsplash.com/*",
+    "https://api.open-meteo.com/*",
+    "https://geocoding-api.open-meteo.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' blob: data: https:;"

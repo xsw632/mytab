@@ -195,6 +195,12 @@
         </button>
       </div>
       <div class="modal-body">
+        <div class="modal-tabs" id="addItemTabs">
+          <button type="button" class="modal-tab active" data-tab="shortcut" id="addTabShortcut">快捷方式</button>
+          <button type="button" class="modal-tab" data-tab="widget" id="addTabWidget">小组件</button>
+        </div>
+
+        <div class="add-item-panel" id="addPanelShortcut">
         <input type="hidden" id="editShortcutId">
         <div class="form-group">
           <label for="shortcutName">名称:</label>
@@ -237,6 +243,53 @@
             <div class="emoji-grid" id="emojiGrid">
               <!-- Emojis will be inserted here by JS -->
             </div>
+          </div>
+        </div>
+        </div>
+
+        <div class="add-item-panel" id="addPanelWidget" style="display:none;">
+          <input type="hidden" id="editWidgetId">
+          <div class="form-group">
+            <label for="widgetType">类型:</label>
+            <select id="widgetType">
+              <option value="todo">待办（今日/本周）</option>
+              <option value="note" selected>便签（Markdown 简版）</option>
+              <option value="calendar">日历</option>
+              <option value="weather">天气</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="widgetSize">大小:</label>
+            <select id="widgetSize">
+              <option value="4">4x4</option>
+              <option value="8" selected>8x8</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="widgetTitle">标题:</label>
+            <input type="text" id="widgetTitle" placeholder="例如：我的待办 / 便签 / 天气">
+          </div>
+
+          <div class="form-group widget-field" data-widget="note">
+            <label for="widgetNoteContent">内容（支持 Markdown 简版）:</label>
+            <textarea id="widgetNoteContent" rows="6" placeholder="例如：&#10;**重点**&#10;- 今天要做的事&#10;`代码`"></textarea>
+            <label class="checkbox-row">
+              <input type="checkbox" id="widgetNotePinned">
+              置顶便签
+            </label>
+          </div>
+
+          <div class="form-group widget-field" data-widget="weather" style="display:none;">
+            <label for="widgetWeatherCity">城市:</label>
+            <input type="text" id="widgetWeatherCity" placeholder="例如：北京 / 上海 / Shenzhen">
+          </div>
+
+          <div class="form-group widget-field" data-widget="todo" style="display:none;">
+            <div class="form-hint">创建后可在小组件上直接勾选/添加待办。</div>
+          </div>
+
+          <div class="form-group widget-field" data-widget="calendar" style="display:none;">
+            <div class="form-hint">日历小组件为本地展示，无需额外设置。</div>
           </div>
         </div>
         <div class="form-actions">

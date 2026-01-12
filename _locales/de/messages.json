@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "MyTab - Neuer Tab"
+  },
+  "extDescription": {
+    "message": "Eine schöne und funktionsreiche Neuer-Tab-Erweiterung mit Hintergründen, Verknüpfungen und Kategorienverwaltung."
+  },
+  "actionTitle": {
+    "message": "MyTab Einstellungen"
+  }
+}

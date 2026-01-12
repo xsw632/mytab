@@ -7,7 +7,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const data = await getStorageData();
 
     // 更新统计
-    document.getElementById('shortcutCount').textContent = data.shortcuts?.length || 0;
+    const shortcutCount = (data.shortcuts?.length || 0) + (data.widgets?.length || 0);
+    document.getElementById('shortcutCount').textContent = shortcutCount;
     document.getElementById('categoryCount').textContent = data.categories?.length || 0;
 
     // 壁纸名称
@@ -35,12 +36,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 function getStorageData() {
     return new Promise((resolve) => {
         if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.get(['settings', 'categories', 'shortcuts'], resolve);
+            chrome.storage.local.get(['settings', 'categories', 'shortcuts', 'widgets'], resolve);
         } else {
             resolve({
                 settings: JSON.parse(localStorage.getItem('mytab_settings')) || {},
                 categories: JSON.parse(localStorage.getItem('mytab_categories')) || [],
-                shortcuts: JSON.parse(localStorage.getItem('mytab_shortcuts')) || []
+                shortcuts: JSON.parse(localStorage.getItem('mytab_shortcuts')) || [],
+                widgets: JSON.parse(localStorage.getItem('mytab_widgets')) || []
             });
         }
     });

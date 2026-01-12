@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "MyTab - Nuova scheda"
+  },
+  "extDescription": {
+    "message": "Una bellissima estensione per la nuova scheda, ricca di funzioni: sfondi, collegamenti rapidi e gestione per categorie."
+  },
+  "actionTitle": {
+    "message": "Impostazioni MyTab"
+  }
+}

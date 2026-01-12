@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "MyTab - 新标签页"
+  },
+  "extDescription": {
+    "message": "一个美观、功能丰富的新标签页扩展，支持自定义壁纸、快捷链接和分类管理。"
+  },
+  "actionTitle": {
+    "message": "MyTab 设置"
+  }
+}

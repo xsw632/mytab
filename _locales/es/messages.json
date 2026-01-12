@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "MyTab - Nueva pestaña"
+  },
+  "extDescription": {
+    "message": "Una extensión de nueva pestaña bonita y con muchas funciones: fondos de pantalla, accesos directos y gestión por categorías."
+  },
+  "actionTitle": {
+    "message": "Ajustes de MyTab"
+  }
+}

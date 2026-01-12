@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "MyTab - 新しいタブ"
+  },
+  "extDescription": {
+    "message": "壁紙、ショートカット、カテゴリ管理に対応した、美しく多機能な新しいタブ拡張機能です。"
+  },
+  "actionTitle": {
+    "message": "MyTab 設定"
+  }
+}

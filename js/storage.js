@@ -27,6 +27,7 @@ const Storage = {
       { id: '5', name: '知乎', url: 'https://www.zhihu.com', icon: 'auto', categoryId: 'home' },
       { id: '6', name: '哔哩哔哩', url: 'https://www.bilibili.com', icon: 'auto', categoryId: 'home' }
     ],
+    widgets: [],
     currentCategory: 'home'
   },
 
@@ -36,11 +37,12 @@ const Storage = {
   async getAll() {
     return new Promise((resolve) => {
       if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get(['settings', 'categories', 'shortcuts', 'currentCategory'], (result) => {
+        chrome.storage.local.get(['settings', 'categories', 'shortcuts', 'widgets', 'currentCategory'], (result) => {
           resolve({
             settings: result.settings || this.defaults.settings,
             categories: result.categories || this.defaults.categories,
             shortcuts: result.shortcuts || this.defaults.shortcuts,
+            widgets: result.widgets || this.defaults.widgets,
             currentCategory: result.currentCategory || this.defaults.currentCategory
           });
         });
@@ -49,8 +51,9 @@ const Storage = {
         const settings = JSON.parse(localStorage.getItem('mytab_settings')) || this.defaults.settings;
         const categories = JSON.parse(localStorage.getItem('mytab_categories')) || this.defaults.categories;
         const shortcuts = JSON.parse(localStorage.getItem('mytab_shortcuts')) || this.defaults.shortcuts;
+        const widgets = JSON.parse(localStorage.getItem('mytab_widgets')) || this.defaults.widgets;
         const currentCategory = localStorage.getItem('mytab_currentCategory') || this.defaults.currentCategory;
-        resolve({ settings, categories, shortcuts, currentCategory });
+        resolve({ settings, categories, shortcuts, widgets, currentCategory });
       }
     });
   },
@@ -92,6 +95,20 @@ const Storage = {
         chrome.storage.local.set({ shortcuts }, resolve);
       } else {
         localStorage.setItem('mytab_shortcuts', JSON.stringify(shortcuts));
+        resolve();
+      }
+    });
+  },
+
+  /**
+   * 保存小组件
+   */
+  async saveWidgets(widgets) {
+    return new Promise((resolve) => {
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.set({ widgets }, resolve);
+      } else {
+        localStorage.setItem('mytab_widgets', JSON.stringify(widgets));
         resolve();
       }
     });

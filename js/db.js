@@ -6,6 +6,21 @@ const ImageDB = {
     storeName: 'images',
     db: null,
     initPromise: null,
+    objectUrlByKey: new Map(),
+
+    isCacheableUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+        try {
+            const { hostname, protocol } = new URL(url);
+            if (protocol !== 'https:' && protocol !== 'http:') return false;
+            return hostname === 'www.google.com' ||
+                hostname === 'icons.duckduckgo.com' ||
+                hostname === 'images.unsplash.com';
+        } catch (e) {
+            return false;
+        }
+    },
 
     /**
      * Initialize the database
@@ -70,6 +85,7 @@ const ImageDB = {
     async deleteImage(key) {
         if (!this.db) await this.init();
         console.log(`[ImageDB] Deleting image: ${key}`);
+        this.revokeObjectUrl(key);
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([this.storeName], 'readwrite');
             const store = transaction.objectStore(this.storeName);
@@ -115,6 +131,29 @@ const ImageDB = {
         });
     },
 
+    getObjectUrl(key, blob) {
+        if (!key || !blob) return null;
+        const existing = this.objectUrlByKey.get(key);
+        if (existing) return existing;
+        const objectUrl = URL.createObjectURL(blob);
+        this.objectUrlByKey.set(key, objectUrl);
+        return objectUrl;
+    },
+
+    revokeObjectUrl(key) {
+        const objectUrl = this.objectUrlByKey.get(key);
+        if (!objectUrl) return;
+        URL.revokeObjectURL(objectUrl);
+        this.objectUrlByKey.delete(key);
+    },
+
+    revokeAllObjectUrls() {
+        for (const objectUrl of this.objectUrlByKey.values()) {
+            URL.revokeObjectURL(objectUrl);
+        }
+        this.objectUrlByKey.clear();
+    },
+
     /**
      * Fetch and cache an image from a URL
      * @param {string} url - Image URL
@@ -129,7 +168,7 @@ const ImageDB = {
             const blob = await this.getImage(url);
             if (blob) {
                 console.log('Loaded from cache:', url);
-                return URL.createObjectURL(blob);
+                return this.getObjectUrl(url, blob);
             }
         } catch (e) {
             console.warn('Cache lookup failed:', e);
@@ -151,7 +190,7 @@ const ImageDB = {
             // Save to DB in background
             this.saveImage(url, blob).catch(e => console.warn('Cache save failed:', e));
 
-            return URL.createObjectURL(blob);
+            return this.getObjectUrl(url, blob);
         } catch (e) {
             console.error('Fetch failed:', e);
             return url; // Fallback to original URL
@@ -198,70 +237,99 @@ const ImageDB = {
             return;
         }
 
-        console.log('[ImageDB] Starting icon migration...');
+        const connection = navigator.connection;
+        if (connection?.saveData || connection?.effectiveType === '2g' || connection?.effectiveType === 'slow-2g') {
+            console.log('[ImageDB] Slow connection / data saver enabled, skipping migration...');
+            return;
+        }
 
-        try {
-            const data = await chrome.storage.local.get('shortcuts');
-            const shortcuts = data.shortcuts || [];
-            let successCount = 0;
-            let failCount = 0;
+        const run = async () => {
+            if (!navigator.onLine) return;
 
-            for (const s of shortcuts) {
-                let iconUrl = s.icon;
+            console.log('[ImageDB] Starting icon migration...');
 
-                // 处理 auto 类型
-                if (iconUrl === 'auto' || !iconUrl) {
-                    try {
-                        let urlStr = s.url;
-                        if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr;
-                        const u = new URL(urlStr);
-                        iconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=128`;
-                    } catch (e) {
-                        continue;
+            try {
+                const data = await chrome.storage.local.get('shortcuts');
+                const shortcuts = data.shortcuts || [];
+
+                const iconUrls = [];
+                for (const s of shortcuts) {
+                    let iconUrl = s.icon;
+                    if (iconUrl === 'auto' || !iconUrl) {
+                        try {
+                            let urlStr = s.url;
+                            if (!urlStr.startsWith('http')) urlStr = 'https://' + urlStr;
+                            const u = new URL(urlStr);
+                            iconUrl = `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=128`;
+                        } catch (e) {
+                            continue;
+                        }
                     }
+
+                    if (!this.isCacheableUrl(iconUrl)) continue;
+                    iconUrls.push({ name: s.name, url: iconUrl });
                 }
 
-                // 跳过非 http 图标 (emoji, local- 等)
-                if (!iconUrl.startsWith('http')) {
-                    continue;
-                }
+                let successCount = 0;
+                let failCount = 0;
+                const concurrency = 3;
+                const queue = [...iconUrls];
 
-                // 检查是否已缓存
-                const existing = await this.getImage(iconUrl);
-                if (existing) {
-                    console.log(`[ImageDB] Already cached: ${s.name}`);
-                    successCount++;
-                    continue;
-                }
+                const worker = async () => {
+                    while (queue.length && navigator.onLine) {
+                        const item = queue.shift();
+                        if (!item) return;
 
-                // 从网络获取并缓存
-                try {
-                    console.log(`[ImageDB] Caching icon for ${s.name}: ${iconUrl}`);
-                    const response = await fetch(iconUrl);
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        await this.saveImage(iconUrl, blob);
-                        console.log(`[ImageDB] Cached: ${s.name}`);
-                        successCount++;
-                    } else {
-                        console.warn(`[ImageDB] Failed to fetch ${s.name}: ${response.status}`);
-                        failCount++;
+                        try {
+                            const existing = await this.getImage(item.url);
+                            if (existing) {
+                                successCount++;
+                                continue;
+                            }
+
+                            const response = await fetch(item.url);
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                await this.saveImage(item.url, blob);
+                                successCount++;
+                            } else {
+                                console.warn(`[ImageDB] Failed to fetch ${item.name}: ${response.status}`);
+                                failCount++;
+                            }
+                        } catch (e) {
+                            console.warn(`[ImageDB] Error caching ${item.name}:`, e?.message || e);
+                            failCount++;
+                        } finally {
+                            await new Promise(r => setTimeout(r, 0));
+                        }
                     }
-                } catch (e) {
-                    console.warn(`[ImageDB] Error caching ${s.name}:`, e.message);
-                    failCount++;
-                }
+                };
+
+                const workers = Array.from({ length: Math.min(concurrency, queue.length) }, () => worker());
+                await Promise.all(workers);
+
+                console.log(`[ImageDB] Migration complete! Success: ${successCount}, Failed: ${failCount}`);
+                await chrome.storage.local.set({ [MIGRATION_KEY]: true });
+            } catch (e) {
+                console.error('[ImageDB] Migration failed:', e);
             }
+        };
 
-            console.log(`[ImageDB] Migration complete! Success: ${successCount}, Failed: ${failCount}`);
-
-            // 标记迁移完成
-            await chrome.storage.local.set({ [MIGRATION_KEY]: true });
-        } catch (e) {
-            console.error('[ImageDB] Migration failed:', e);
+        if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(() => run(), { timeout: 1500 });
+        } else {
+            setTimeout(() => run(), 0);
         }
     }
 };
 
 // 挂载到 window 以便其他脚本访问
 window.ImageDB = ImageDB;
+
+window.addEventListener('beforeunload', () => {
+    try {
+        ImageDB.revokeAllObjectUrls();
+    } catch (e) {
+        // ignore
+    }
+});

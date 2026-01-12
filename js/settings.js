@@ -140,9 +140,9 @@ const Settings = {
                     const blob = await ImageDB.getImage(wpUrl);
                     if (blob) {
                         console.log('Wallpaper cache hit');
-                        finalUrl = URL.createObjectURL(blob);
+                        finalUrl = ImageDB.getObjectUrl(wpUrl, blob);
                         fromCache = true;
-                    } else if (wpUrl.startsWith('http') && navigator.onLine) {
+                    } else if (wpUrl.startsWith('http') && navigator.onLine && ImageDB.isCacheableUrl(wpUrl)) {
                         // 没有缓存且联网，下载并缓存
                         console.log('Wallpaper cache miss, downloading...');
                         try {
@@ -150,7 +150,7 @@ const Settings = {
                             if (response.ok) {
                                 const blob = await response.blob();
                                 await ImageDB.saveImage(wpUrl, blob);
-                                finalUrl = URL.createObjectURL(blob);
+                                finalUrl = ImageDB.getObjectUrl(wpUrl, blob);
                                 fromCache = true;
                                 console.log('Wallpaper cached successfully');
                             }

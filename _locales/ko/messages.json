@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "MyTab - 새 탭"
+  },
+  "extDescription": {
+    "message": "배경화면, 바로가기, 카테고리 관리를 지원하는 아름답고 기능이 풍부한 새 탭 확장 프로그램입니다."
+  },
+  "actionTitle": {
+    "message": "MyTab 설정"
+  }
+}

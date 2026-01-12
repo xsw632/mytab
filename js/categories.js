@@ -53,9 +53,26 @@ const Categories = {
                 e.preventDefault();
                 item.classList.remove('drag-over');
 
-                const shortcutId = e.dataTransfer.getData('shortcutId');
                 const targetCategoryId = item.getAttribute('data-id');
 
+                const rawItem = e.dataTransfer.getData('mytabItem');
+                if (rawItem && targetCategoryId) {
+                    try {
+                        const dragged = JSON.parse(rawItem);
+                        if (dragged?.kind === 'shortcut' && dragged?.id) {
+                            await this.moveShortcutToCategory(dragged.id, targetCategoryId);
+                            return;
+                        }
+                        if (dragged?.kind === 'widget' && dragged?.id) {
+                            await Shortcuts.moveWidgetToCategory(dragged.id, targetCategoryId);
+                            return;
+                        }
+                    } catch (err) {
+                        // ignore and fall back to old shortcutId path
+                    }
+                }
+
+                const shortcutId = e.dataTransfer.getData('shortcutId');
                 if (shortcutId && targetCategoryId) {
                     await this.moveShortcutToCategory(shortcutId, targetCategoryId);
                 }
@@ -272,7 +289,7 @@ const Categories = {
 
         if (confirm(`确定要删除分类 "${cat?.name}" 吗？该分类下的快捷方式将移至首页。`)) {
             // 将该分类的快捷方式移至首页
-            await Shortcuts.moveCategoryShortcutsToHome(id);
+            await Shortcuts.moveCategoryItemsToHome(id);
 
             // 删除分类
             this.categories = this.categories.filter(c => c.id !== id);

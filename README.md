@@ -88,8 +88,23 @@ mytab/
 
 ## 📋 权限说明
 
-本扩展程序只需要以下权限：
-- **storage** - 用于保存用户设置和快捷方式数据
+本扩展程序需要以下权限：
+- **storage** - 用于保存用户设置、快捷方式和小组件数据
+- **host_permissions** - 用于拉取在线资源（favicon/壁纸/天气）：
+  - `https://www.google.com/*`、`https://icons.duckduckgo.com/*`（网站图标）
+  - `https://images.unsplash.com/*`（内置在线壁纸）
+  - `https://api.open-meteo.com/*`、`https://geocoding-api.open-meteo.com/*`（天气小组件）
+
+## ?? Edge/Chrome 商店的“语言识别”为什么会出现多国语言？
+
+商店后台会从扩展包里**自动识别**支持的语言（你在上传时看到的 “We have identified the following languages from your extension package.” 就是这个意思），常见来源是：
+
+- `manifest.json` 里的 `"default_locale"`
+- `_locales/<locale>/messages.json`（每个文件夹代表一个语言/地区，例如 `en`、`zh_CN`、`ja`、`fr`、`de`、`es`、`ko`、`it` 等）
+
+如果你不希望商店显示某些语言：
+- 不要在包里带上对应的 `_locales/<locale>/` 目录
+- 或者只保留你确实维护的语言文件，并将 `"default_locale"` 指向默认语言
 
 ## 🤝 贡献指南
 

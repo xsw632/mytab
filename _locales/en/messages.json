@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "MyTab - New Tab"
+  },
+  "extDescription": {
+    "message": "A beautiful and feature-rich new tab extension with wallpapers, shortcuts, and category management."
+  },
+  "actionTitle": {
+    "message": "MyTab Settings"
+  }
+}

@@ -4,7 +4,14 @@
 
 const Shortcuts = {
     shortcuts: [],
+    widgets: [],
     contextTarget: null,
+    isSaving: false,
+    iconCandidateRequestId: 0,
+    draggingItem: null,
+    weatherCache: new Map(),
+    activeAddTab: 'shortcut',
+    gridDnDBound: false,
     emojis: {
         common: ['⭐', '🔥', '❤️', '📍', '🏠', '💻', '🎮', '💡', '📌', '📎', '📁', '📦', '🚀', '🛠️', '⚙️', '💬'],
         smileys: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺'],
@@ -18,10 +25,55 @@ const Shortcuts = {
     async init() {
         const data = await Storage.getAll();
         this.shortcuts = data.shortcuts;
+        this.widgets = data.widgets || [];
+        const changed = this.ensureItemOrder();
+        if (changed) {
+            await Promise.all([
+                Storage.saveShortcuts(this.shortcuts),
+                Storage.saveWidgets(this.widgets)
+            ]);
+        }
         // Ensure DB is ready before render if possible
         if (window.ImageDB) await ImageDB.init();
         await this.render();
         this.bindEvents();
+    },
+
+    ensureItemOrder() {
+        let changed = false;
+
+        const ensureOrders = (items) => {
+            const byCategory = new Map();
+            items.forEach(item => {
+                const categoryId = item.categoryId || 'home';
+                if (!byCategory.has(categoryId)) byCategory.set(categoryId, []);
+                byCategory.get(categoryId).push(item);
+            });
+
+            for (const list of byCategory.values()) {
+                const ordered = list.filter(i => Number.isFinite(i.order));
+                const unordered = list.filter(i => !Number.isFinite(i.order));
+                if (!unordered.length) continue;
+
+                if (!ordered.length) {
+                    list.forEach((item, index) => {
+                        item.order = index;
+                        changed = true;
+                    });
+                    continue;
+                }
+
+                let next = Math.max(...ordered.map(i => i.order)) + 1;
+                unordered.forEach(item => {
+                    item.order = next++;
+                    changed = true;
+                });
+            }
+        };
+
+        ensureOrders(this.shortcuts);
+        ensureOrders(this.widgets);
+        return changed;
     },
 
     /**
@@ -101,14 +153,46 @@ const Shortcuts = {
      * 获取当前分类的快捷方式
      */
     getCurrentShortcuts() {
-        return this.shortcuts.filter(s => s.categoryId === Categories.currentCategory);
+        return this.shortcuts
+            .filter(s => s.categoryId === Categories.currentCategory)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    },
+
+    getCurrentWidgets() {
+        return this.widgets
+            .filter(w => w.categoryId === Categories.currentCategory)
+            .sort((a, b) => {
+                const pinnedA = wIsPinned(a) ? 1 : 0;
+                const pinnedB = wIsPinned(b) ? 1 : 0;
+                if (pinnedA !== pinnedB) return pinnedB - pinnedA;
+                return (a.order ?? 0) - (b.order ?? 0);
+            });
+
+        function wIsPinned(widget) {
+            return widget?.type === 'note' && widget?.data?.pinned === true;
+        }
+    },
+
+    getCurrentItems() {
+        const shortcuts = this.getCurrentShortcuts().map(s => ({ kind: 'shortcut', item: s }));
+        const widgets = this.getCurrentWidgets().map(w => ({ kind: 'widget', item: w }));
+        const merged = [...shortcuts, ...widgets];
+        merged.sort((a, b) => {
+            const isPinnedA = a.kind === 'widget' && a.item?.type === 'note' && a.item?.data?.pinned === true;
+            const isPinnedB = b.kind === 'widget' && b.item?.type === 'note' && b.item?.data?.pinned === true;
+            if (isPinnedA !== isPinnedB) return isPinnedB - isPinnedA;
+            return (a.item.order ?? 0) - (b.item.order ?? 0);
+        });
+        return merged;
     },
 
     /**
      * 获取指定分类的快捷方式数量
      */
     getCountByCategory(categoryId) {
-        return this.shortcuts.filter(s => s.categoryId === categoryId).length;
+        const shortcuts = this.shortcuts.filter(s => s.categoryId === categoryId).length;
+        const widgets = this.widgets.filter(w => w.categoryId === categoryId).length;
+        return shortcuts + widgets;
     },
 
     /**
@@ -119,6 +203,8 @@ const Shortcuts = {
         if (!container) return;
 
         const shortcuts = this.getCurrentShortcuts();
+        const widgets = this.getCurrentWidgets();
+        const items = this.getCurrentItems();
 
         // 1. Pre-resolve cached icons - 使用 findCachedIcon 尝试多种 key 格式
         const cachedIcons = {};
@@ -140,7 +226,7 @@ const Shortcuts = {
                     const result = await this.findCachedIcon(s);
                     if (result) {
                         const blob = result.blob || result;
-                        cachedIcons[s.id] = URL.createObjectURL(blob);
+                        cachedIcons[s.id] = ImageDB.getObjectUrl(result.key || cacheKey, blob);
                         if (!s.iconCached) {
                             s.iconCached = true;
                             needsSave = true;
@@ -162,10 +248,13 @@ const Shortcuts = {
         }
 
         // 2. Generate HTML with pre-resolved icons
-        const shortcutsHtml = shortcuts.map(shortcut => {
-            const iconHtml = this.getIconHtml(shortcut, cachedIcons[shortcut.id]);
-            return `
+        const itemsHtml = items.map(({ kind, item }) => {
+            if (kind === 'shortcut') {
+                const shortcut = item;
+                const iconHtml = this.getIconHtml(shortcut, cachedIcons[shortcut.id]);
+                return `
         <a class="shortcut-card" href="${this.escapeHtml(shortcut.url)}" 
+           data-kind="shortcut"
            data-id="${shortcut.id}" title="${this.escapeHtml(shortcut.name)}"
            draggable="true">
           <div class="shortcut-icon" id="icon-${shortcut.id}" data-rendering-finished="false">
@@ -174,6 +263,10 @@ const Shortcuts = {
           <span class="shortcut-name">${this.escapeHtml(shortcut.name)}</span>
         </a>
       `;
+            }
+
+            const widget = item;
+            return this.getWidgetCardHtml(widget);
         }).join('');
 
         const addBtnHtml = `
@@ -187,48 +280,79 @@ const Shortcuts = {
       </div>
     `;
 
-        container.innerHTML = shortcutsHtml + addBtnHtml;
+        container.innerHTML = itemsHtml + addBtnHtml;
 
         // 3. Mark as finished rendering to allow secondary cache logic if needed
         container.querySelectorAll('.shortcut-icon').forEach(el => {
             el.dataset.renderingFinished = 'true';
         });
 
-        // Re-bind events for shortcuts
-        const shortcutCards = container.querySelectorAll('.shortcut-card:not(.btn-add-shortcut)');
-        shortcutCards.forEach(card => {
+        // Re-bind events for items
+        const itemCards = container.querySelectorAll('.shortcut-card:not(.btn-add-shortcut)');
+        itemCards.forEach(card => {
             // Drag and Drop
             card.addEventListener('dragstart', (e) => {
+                const kind = card.getAttribute('data-kind') || 'shortcut';
                 const id = card.getAttribute('data-id');
-                e.dataTransfer.setData('shortcutId', id);
-                card.classList.add('dragging');
 
-                // Set ghost image or just visual state
+                this.draggingItem = { kind, id };
+
+                if (kind === 'shortcut') {
+                    e.dataTransfer.setData('shortcutId', id);
+                }
+                e.dataTransfer.setData('mytabItem', JSON.stringify({ kind, id }));
+
+                card.classList.add('dragging');
                 setTimeout(() => card.style.opacity = '0.5', 0);
             });
 
             card.addEventListener('dragend', () => {
                 card.classList.remove('dragging');
                 card.style.opacity = '1';
+                this.draggingItem = null;
 
-                // Clear all category highlights
                 document.querySelectorAll('.category-item').forEach(item => {
                     item.classList.remove('drag-over');
                 });
+                container.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
             });
 
-            // Context Menu
-            card.addEventListener('contextmenu', (e) => {
+            card.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                this.contextTarget = card.getAttribute('data-id');
-                const menu = document.getElementById('contextMenu');
-                if (menu) {
-                    menu.style.left = `${e.pageX}px`;
-                    menu.style.top = `${e.pageY}px`;
-                    menu.classList.add('show');
-                }
+                card.classList.add('drag-over');
+            });
+
+            card.addEventListener('dragleave', () => {
+                card.classList.remove('drag-over');
+            });
+
+            card.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                card.classList.remove('drag-over');
+
+                const raw = e.dataTransfer.getData('mytabItem');
+                if (!raw) return;
+                let dragged;
+                try { dragged = JSON.parse(raw); } catch (err) { return; }
+                if (!dragged?.id) return;
+
+                const targetKind = card.getAttribute('data-kind') || 'shortcut';
+                const targetId = card.getAttribute('data-id');
+                if (!targetId) return;
+
+                const rect = card.getBoundingClientRect();
+                const midX = rect.left + rect.width / 2;
+                const midY = rect.top + rect.height / 2;
+                const dx = e.clientX - midX;
+                const dy = e.clientY - midY;
+                const useX = Math.abs(dx) > Math.abs(dy);
+                const isAfter = useX ? (e.clientX > midX) : (e.clientY > midY);
+
+                await this.reorderInCurrentCategory(dragged.kind, dragged.id, targetKind, targetId, isAfter);
             });
         });
+
+        // container-level drag handlers are bound once in bindEvents()
 
         // Add Button
         const addBtn = document.getElementById('addShortcutBtn');
@@ -272,7 +396,9 @@ const Shortcuts = {
                         // Cache the fallback execution
                         if (window.ImageDB && target.dataset.src) {
                             fetch(fallbackUrl).then(r => r.blob()).then(blob => {
-                                ImageDB.saveImage(target.dataset.src, blob);
+                                if (ImageDB.isCacheableUrl(target.dataset.src)) {
+                                    ImageDB.saveImage(target.dataset.src, blob);
+                                }
                             }).catch(e => console.warn('Failed to cache fallback:', e));
                         }
                         target.src = fallbackUrl;
@@ -291,7 +417,9 @@ const Shortcuts = {
                             // We should probably cache this one too if we are here.
                             if (window.ImageDB && target.dataset.src) {
                                 fetch(newUrl).then(r => r.blob()).then(blob => {
-                                    ImageDB.saveImage(target.dataset.src, blob);
+                                    if (ImageDB.isCacheableUrl(target.dataset.src)) {
+                                        ImageDB.saveImage(target.dataset.src, blob);
+                                    }
                                 }).catch(e => console.warn('Failed to cache fallback:', e));
                             }
                             return;
@@ -324,6 +452,12 @@ const Shortcuts = {
                     // 从网络获取并缓存
                     console.log(`[Shortcuts] Fetching icon from network: ${url}`);
                     try {
+                        if (!ImageDB.isCacheableUrl(url)) {
+                            img.src = url;
+                            delete img.dataset.needFetch;
+                            continue;
+                        }
+
                         const response = await fetch(url);
                         if (response.ok) {
                             const blob = await response.blob();
@@ -333,7 +467,7 @@ const Shortcuts = {
                             shortcut.iconCached = true;
 
                             // 更新图片
-                            const blobUrl = URL.createObjectURL(blob);
+                            const blobUrl = ImageDB.getObjectUrl(url, blob);
                             img.src = blobUrl;
                             img.dataset.cached = 'true';
                             delete img.dataset.needFetch;
@@ -364,7 +498,49 @@ const Shortcuts = {
             }
         }
 
+        // 5. Widgets post-render (weather refresh)
+        if (navigator.onLine) {
+            widgets
+                .filter(w => w.type === 'weather')
+                .forEach(w => this.maybeRefreshWeather(w));
+        }
+
         Categories.render();
+    },
+
+    async reorderInCurrentCategory(dragKind, dragId, targetKind, targetId, isAfter = false) {
+        const items = this.getCurrentItems();
+        const draggedIndex = items.findIndex(x => x.kind === dragKind && x.item.id === dragId);
+        if (draggedIndex === -1) return;
+
+        const dragged = items.splice(draggedIndex, 1)[0];
+
+        let insertIndex = items.length;
+        if (targetId) {
+            const targetIndex = items.findIndex(x => x.kind === targetKind && x.item.id === targetId);
+            if (targetIndex !== -1) insertIndex = targetIndex + (isAfter ? 1 : 0);
+        }
+
+        items.splice(insertIndex, 0, dragged);
+
+        // Assign new order in current category (keep pinned notes pinned via sort rules)
+        items.forEach((entry, index) => {
+            entry.item.order = index;
+            if (entry.kind === 'shortcut') {
+                const s = this.shortcuts.find(x => x.id === entry.item.id);
+                if (s) s.order = index;
+            } else {
+                const w = this.widgets.find(x => x.id === entry.item.id);
+                if (w) w.order = index;
+            }
+        });
+
+        await Promise.all([
+            Storage.saveShortcuts(this.shortcuts),
+            Storage.saveWidgets(this.widgets)
+        ]);
+
+        await this.render();
     },
 
     /**
@@ -423,6 +599,329 @@ const Shortcuts = {
         }
     },
 
+    getWidgetCardHtml(widget) {
+        const display = this.getWidgetDisplayV2(widget);
+        const size = (widget?.size === '4' || widget?.size === 4) ? '4' : '8';
+
+        return `
+        <div class="shortcut-card widget-card widget-size-${size}"
+             data-kind="widget"
+             data-type="${this.escapeHtml(widget.type || '')}"
+             data-id="${this.escapeHtml(widget.id)}"
+             title="${this.escapeHtml(display.title)}"
+             draggable="true">
+          <div class="widget-header">
+            <div class="widget-title">${this.escapeHtml(display.title)}</div>
+            <div class="widget-badge" aria-hidden="true">${display.badgeHtml}</div>
+          </div>
+          <div class="widget-body">
+            ${display.bodyHtml}
+          </div>
+        </div>
+      `;
+    },
+
+    getWidgetDisplayV2(widget) {
+        const type = widget?.type || 'note';
+        const title = widget?.title || this.getDefaultWidgetTitle(type);
+
+        if (type === 'todo') {
+            const items = Array.isArray(widget?.data?.items) ? widget.data.items : [];
+            const today = items.filter(i => i.scope !== 'week');
+            const week = items.filter(i => i.scope === 'week');
+            const countLine = `今天 ${today.filter(i => i.done).length}/${today.length} · 本周 ${week.filter(i => i.done).length}/${week.length}`;
+
+            const renderTodoItem = (item) => {
+                const checked = item.done ? 'checked' : '';
+                return `<label class="todo-item"><input type="checkbox" class="widget-todo-toggle" data-widget="${this.escapeHtml(widget.id)}" data-item="${this.escapeHtml(item.id)}" ${checked}><span>${this.escapeHtml(item.text || '')}</span></label>`;
+            };
+
+            return {
+                title,
+                badgeHtml: '✅',
+                bodyHtml: `
+                    <div class="todo-count">${this.escapeHtml(countLine)}</div>
+                    <div class="todo-list">
+                      <div class="todo-group">
+                        <div class="todo-title">今天</div>
+                        ${today.slice(0, 4).map(renderTodoItem).join('') || '<div class="todo-empty">暂无</div>'}
+                      </div>
+                      <div class="todo-group">
+                        <div class="todo-title">本周</div>
+                        ${week.slice(0, 4).map(renderTodoItem).join('') || '<div class="todo-empty">暂无</div>'}
+                      </div>
+                    </div>
+                    <div class="todo-actions">
+                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="today" title="添加今天待办">+今天</button>
+                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="week" title="添加本周待办">+本周</button>
+                    </div>
+                `
+            };
+        }
+
+        if (type === 'calendar') {
+            const now = new Date();
+            const year = now.getFullYear();
+            const monthIndex = now.getMonth();
+            const month = monthIndex + 1;
+            const today = now.getDate();
+
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+            const firstDay = new Date(year, monthIndex, 1).getDay();
+            const weekHeaders = ['日', '一', '二', '三', '四', '五', '六'];
+
+            const cells = [];
+            for (let i = 0; i < firstDay; i++) cells.push('');
+            for (let d = 1; d <= daysInMonth; d++) cells.push(String(d));
+            while (cells.length % 7 !== 0) cells.push('');
+
+            const gridHtml = `
+              <div class="cal-grid">
+                ${weekHeaders.map(w => `<div class="cal-head">${w}</div>`).join('')}
+                ${cells.map(v => {
+                    if (!v) return `<div class="cal-cell empty"></div>`;
+                    const isToday = Number(v) === today;
+                    return `<div class="cal-cell ${isToday ? 'today' : ''}">${v}</div>`;
+                }).join('')}
+              </div>
+            `;
+
+            return {
+                title,
+                badgeHtml: '📅',
+                bodyHtml: `
+                  <div class="cal-meta">${year}年${month}月</div>
+                  ${gridHtml}
+                `
+            };
+        }
+
+        if (type === 'weather') {
+            const city = (widget?.data?.city || '').trim();
+            const last = widget?.data?.last;
+            const lastFetched = widget?.data?.lastFetched;
+            const ageMin = Number.isFinite(lastFetched) ? Math.floor((Date.now() - lastFetched) / 60000) : null;
+            const ageStr = ageMin === null ? '' : `${ageMin} 分钟前`;
+
+            if (last && typeof last.temp === 'number') {
+                return {
+                    title,
+                    badgeHtml: '🌦️',
+                    bodyHtml: `
+                      <div class="wx-row">
+                        <div class="wx-city">${this.escapeHtml(city || '天气')}</div>
+                        <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="刷新">刷新</button>
+                      </div>
+                      <div class="wx-temp">${last.temp}<span class="wx-unit">°C</span></div>
+                      <div class="wx-meta">${this.escapeHtml(ageStr)}</div>
+                    `
+                };
+            }
+
+            return {
+                title,
+                badgeHtml: '🌦️',
+                bodyHtml: `
+                  <div class="wx-row">
+                    <div class="wx-city">${this.escapeHtml(city || '未设置城市')}</div>
+                    <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="刷新">获取</button>
+                  </div>
+                  <div class="wx-meta">请输入城市后点击保存，再点获取</div>
+                `
+            };
+        }
+
+        const pinned = widget?.data?.pinned === true;
+        const content = typeof widget?.data?.content === 'string' ? widget.data.content : '';
+        return {
+            title,
+            badgeHtml: pinned ? '📌' : '📝',
+            bodyHtml: `<div class="note-content">${content.trim() ? this.renderSimpleMarkdown(content.trim()) : `<span class="note-placeholder">${this.escapeHtml('点击编辑内容...')}</span>`}</div>`
+        };
+    },
+
+    getWidgetDisplay(widget) {
+        const type = widget?.type || 'note';
+        const title = widget?.title || this.getDefaultWidgetTitle(type);
+
+        if (type === 'todo') {
+            const items = Array.isArray(widget?.data?.items) ? widget.data.items : [];
+            const today = items.filter(i => i.scope !== 'week');
+            const week = items.filter(i => i.scope === 'week');
+            const countLine = `今天 ${today.filter(i => i.done).length}/${today.length} · 本周 ${week.filter(i => i.done).length}/${week.length}`;
+
+            const renderTodoItem = (item) => {
+                const checked = item.done ? 'checked' : '';
+                return `<label class="todo-item"><input type="checkbox" class="widget-todo-toggle" data-widget="${this.escapeHtml(widget.id)}" data-item="${this.escapeHtml(item.id)}" ${checked}><span>${this.escapeHtml(item.text || '')}</span></label>`;
+            };
+
+            const todayHtml = today.slice(0, 2).map(renderTodoItem).join('');
+            const weekHtml = week.slice(0, 2).map(renderTodoItem).join('');
+            const listHtml = `
+                <div class="todo-group">
+                  <div class="todo-title">今天</div>
+                  ${todayHtml || '<div class="todo-empty">暂无</div>'}
+                </div>
+                <div class="todo-group">
+                  <div class="todo-title">本周</div>
+                  ${weekHtml || '<div class="todo-empty">暂无</div>'}
+                </div>
+            `;
+            return {
+                icon: '✅',
+                title,
+                metaHtml: `
+                    <div class="todo-count">${this.escapeHtml(countLine)}</div>
+                    <div class="todo-list">${listHtml}</div>
+                    <div class="todo-actions">
+                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="today" title="添加今天待办">+今天</button>
+                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="week" title="添加本周待办">+本周</button>
+                    </div>
+                `
+            };
+        }
+
+        if (type === 'calendar') {
+            const now = new Date();
+            const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const d = `${now.getMonth() + 1}月${now.getDate()}日`;
+            return {
+                icon: '📅',
+                title,
+                metaHtml: `<span>${this.escapeHtml(ym)} · ${this.escapeHtml(d)}</span>`
+            };
+        }
+
+        if (type === 'weather') {
+            const city = (widget?.data?.city || '').trim();
+            const last = widget?.data?.last;
+            const lastFetched = widget?.data?.lastFetched;
+            const ageMin = Number.isFinite(lastFetched) ? Math.floor((Date.now() - lastFetched) / 60000) : null;
+
+            if (last && typeof last.temp === 'number') {
+                const ageStr = ageMin === null ? '' : ` · ${ageMin}m`;
+                return {
+                    icon: '🌦️',
+                    title,
+                    metaHtml: `<span>${this.escapeHtml(city || '天气')}: ${last.temp}°C${this.escapeHtml(ageStr)}</span> <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="刷新">↻</button>`
+                };
+            }
+
+            return {
+                icon: '🌦️',
+                title,
+                metaHtml: `<span>${this.escapeHtml(city || '设置城市')} · 未获取</span> <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="刷新">↻</button>`
+            };
+        }
+
+        // note (default)
+        const pinned = widget?.data?.pinned === true;
+        const content = typeof widget?.data?.content === 'string' ? widget.data.content : '';
+        const preview = content.trim().slice(0, 120);
+        return {
+            icon: pinned ? '📌' : '📝',
+            title,
+            metaHtml: preview ? this.renderSimpleMarkdown(preview) : `<span>${this.escapeHtml('点击编辑')}</span>`
+        };
+    },
+
+    getDefaultWidgetTitle(type) {
+        if (type === 'todo') return '待办';
+        if (type === 'calendar') return '日历';
+        if (type === 'weather') return '天气';
+        return '便签';
+    },
+
+    getNextOrderForCategory(categoryId) {
+        const orders = [];
+        this.shortcuts.forEach(s => {
+            if (s.categoryId === categoryId && Number.isFinite(s.order)) orders.push(s.order);
+        });
+        this.widgets.forEach(w => {
+            if (w.categoryId === categoryId && Number.isFinite(w.order)) orders.push(w.order);
+        });
+        if (!orders.length) return 0;
+        return Math.max(...orders) + 1;
+    },
+
+    renderSimpleMarkdown(text) {
+        const escaped = this.escapeHtml(text || '');
+        return escaped
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br>');
+    },
+
+    async maybeRefreshWeather(widget, force = false) {
+        if (!widget || widget.type !== 'weather') return;
+        const city = (widget?.data?.city || '').trim();
+        if (!city) return;
+
+        if (!widget.data) widget.data = {};
+        const lastFetched = widget.data.lastFetched;
+        const isFresh = Number.isFinite(lastFetched) && (Date.now() - lastFetched) < 30 * 60 * 1000;
+        if (!force && isFresh) return;
+
+        const cached = this.weatherCache.get(city);
+        if (!force && cached && (Date.now() - cached.fetchedAt) < 30 * 60 * 1000) {
+            widget.data.last = cached.last;
+            widget.data.lastFetched = cached.fetchedAt;
+            await Storage.saveWidgets(this.widgets);
+            await this.render();
+            return;
+        }
+
+        try {
+            const weather = await this.fetchWeatherByCity(city);
+            if (!weather) return;
+
+            widget.data.last = weather.last;
+            widget.data.lastFetched = weather.fetchedAt;
+            this.weatherCache.set(city, weather);
+
+            await Storage.saveWidgets(this.widgets);
+            await this.render();
+        } catch (e) {
+            console.warn('[Widgets] Weather fetch failed:', e?.message || e);
+        }
+    },
+
+    async fetchWeatherByCity(city) {
+        const timeoutFetchJson = async (url, timeoutMs = 4000) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const res = await fetch(url, { signal: controller.signal });
+                if (!res.ok) return null;
+                return await res.json();
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        };
+
+        const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=zh&format=json`;
+        const geo = await timeoutFetchJson(geoUrl, 4000);
+        const first = geo?.results?.[0];
+        if (!first) return null;
+
+        const lat = first.latitude;
+        const lon = first.longitude;
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+        const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+        const wx = await timeoutFetchJson(wxUrl, 4000);
+        const temp = wx?.current?.temperature_2m;
+        const code = wx?.current?.weather_code;
+        if (!Number.isFinite(temp)) return null;
+
+        const fetchedAt = Date.now();
+        return {
+            fetchedAt,
+            last: { temp: Math.round(temp), code: Number.isFinite(code) ? code : null }
+        };
+    },
+
     /**
      * 绑定事件
      */
@@ -432,9 +931,33 @@ const Shortcuts = {
         const closeBtn = document.getElementById('closeShortcutModal');
         const cancelBtn = document.getElementById('cancelShortcut');
         const saveBtn = document.getElementById('saveShortcut');
+        const modalTitle = document.getElementById('shortcutModalTitle');
+        const addTabShortcut = document.getElementById('addTabShortcut');
+        const addTabWidget = document.getElementById('addTabWidget');
+        const widgetType = document.getElementById('widgetType');
+        const widgetTitle = document.getElementById('widgetTitle');
         const iconOptions = document.querySelectorAll('.icon-option');
         const iconInput = document.getElementById('shortcutIcon');
         const emojiPicker = document.getElementById('emojiPicker');
+
+        addTabShortcut?.addEventListener('click', () => {
+            this.setAddItemTab('shortcut');
+            if (modalTitle) modalTitle.textContent = '➕ 添加快捷方式';
+            document.getElementById('shortcutName')?.focus();
+        });
+
+        addTabWidget?.addEventListener('click', () => {
+            this.setAddItemTab('widget');
+            if (modalTitle) modalTitle.textContent = '➕ 添加小组件';
+            widgetTitle?.focus();
+        });
+
+        widgetType?.addEventListener('change', () => {
+            this.updateWidgetFieldVisibility(widgetType.value);
+            if (this.activeAddTab === 'widget' && widgetTitle && !widgetTitle.value.trim()) {
+                widgetTitle.value = this.getDefaultWidgetTitle(widgetType.value);
+            }
+        });
 
         // Icon options switching
         iconOptions.forEach(option => {
@@ -493,6 +1016,7 @@ const Shortcuts = {
         const uploadInput = document.getElementById('iconUploadInput');
         const uploadPreview = document.getElementById('uploadPreview');
         const previewImg = uploadPreview?.querySelector('img');
+
         const removeUpload = document.getElementById('removeUpload');
 
         uploadInput?.addEventListener('change', (e) => {
@@ -534,10 +1058,75 @@ const Shortcuts = {
 
         // Open Add Modal use delegation
         container?.addEventListener('click', (e) => {
+            const todoAdd = e.target.closest('.widget-todo-add');
+            if (todoAdd) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const widget = this.widgets.find(w => w.id === todoAdd.dataset.id);
+                if (!widget || widget.type !== 'todo') return;
+                if (!widget.data) widget.data = { items: [] };
+                if (!Array.isArray(widget.data.items)) widget.data.items = [];
+
+                const scope = todoAdd.dataset.scope === 'week' ? 'week' : 'today';
+                const text = prompt(scope === 'week' ? '添加本周待办：' : '添加今天待办：');
+                if (!text || !text.trim()) return;
+
+                widget.data.items.push({
+                    id: Storage.generateId(),
+                    text: text.trim(),
+                    done: false,
+                    scope
+                });
+
+                Storage.saveWidgets(this.widgets).then(() => this.render());
+                return;
+            }
+
+            const refreshBtn = e.target.closest('.widget-weather-refresh');
+            if (refreshBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const widget = this.widgets.find(w => w.id === refreshBtn.dataset.id);
+                if (widget) this.maybeRefreshWeather(widget, true);
+                return;
+            }
+
+            if (e.target.closest('.widget-action')) {
+                return;
+            }
+
+            if (e.target.closest('.widget-todo-toggle')) {
+                return;
+            }
+
+            const widgetCard = e.target.closest('.widget-card');
+            if (widgetCard && !e.target.closest('a')) {
+                const id = widgetCard.dataset.id;
+                if (id) this.showModal({ kind: 'widget', id });
+                return;
+            }
+
             const addBtn = e.target.closest('#addShortcutBtn');
             if (addBtn) {
                 this.showModal();
             }
+        });
+
+        container?.addEventListener('change', (e) => {
+            const checkbox = e.target.closest('.widget-todo-toggle');
+            if (!checkbox) return;
+
+            const widgetId = checkbox.dataset.widget;
+            const itemId = checkbox.dataset.item;
+            const widget = this.widgets.find(w => w.id === widgetId);
+            if (!widget || widget.type !== 'todo' || !Array.isArray(widget.data?.items)) return;
+
+            const item = widget.data.items.find(i => i.id === itemId);
+            if (!item) return;
+            item.done = checkbox.checked;
+
+            Storage.saveWidgets(this.widgets).then(() => this.render());
         });
 
         // Close Modal
@@ -545,20 +1134,48 @@ const Shortcuts = {
         cancelBtn?.addEventListener('click', () => this.hideModal());
 
         // Save
-        saveBtn?.addEventListener('click', () => this.save());
+        saveBtn?.addEventListener('click', () => {
+            if (this.activeAddTab === 'widget') {
+                this.saveWidget();
+            } else {
+                this.save();
+            }
+        });
 
         // Context Menu
         if (container) {
             container.addEventListener('contextmenu', (e) => {
-                const card = e.target.closest('.shortcut-card');
+                const card = e.target.closest('.shortcut-card:not(.btn-add-shortcut)');
                 if (card) {
                     e.preventDefault();
                     this.contextTarget = {
-                        type: 'shortcut',
+                        type: (card.dataset.kind === 'widget') ? 'widget' : 'shortcut',
                         id: card.dataset.id
                     };
                     App.showContextMenu(e.clientX, e.clientY);
                 }
+            });
+        }
+
+        // Grid drop to end (bind once)
+        if (container && !this.gridDnDBound) {
+            this.gridDnDBound = true;
+
+            container.addEventListener('dragover', (e) => {
+                if (this.draggingItem) {
+                    e.preventDefault();
+                }
+            });
+
+            container.addEventListener('drop', async (e) => {
+                const raw = e.dataTransfer?.getData('mytabItem');
+                if (!raw) return;
+                if (e.target.closest('.shortcut-card:not(.btn-add-shortcut)')) return;
+
+                let dragged;
+                try { dragged = JSON.parse(raw); } catch (err) { return; }
+                if (!dragged?.id) return;
+                await this.reorderInCurrentCategory(dragged.kind, dragged.id, null, null);
             });
         }
     },
@@ -580,114 +1197,106 @@ const Shortcuts = {
      * 保存快捷方式
      */
     async save() {
+        if (this.isSaving) return;
+
         const idInput = document.getElementById('editShortcutId');
         const nameInput = document.getElementById('shortcutName');
         const urlInput = document.getElementById('shortcutUrl');
         const iconInput = document.getElementById('shortcutIcon');
         const uploadInput = document.getElementById('iconUploadInput');
+        const saveBtn = document.getElementById('saveShortcut');
 
-        const name = nameInput.value.trim();
-        let url = urlInput.value.trim();
-        const activeOption = document.querySelector('.icon-option.active');
-        const type = activeOption ? activeOption.dataset.type : 'auto';
+        this.isSaving = true;
+        if (saveBtn) saveBtn.disabled = true;
 
-        let icon = iconInput.value.trim();
-        if (type === 'auto' && !icon) icon = 'auto';
+        try {
+            const name = nameInput.value.trim();
+            let url = urlInput.value.trim();
+            const activeOption = document.querySelector('.icon-option.active');
+            const type = activeOption ? activeOption.dataset.type : 'auto';
 
-        if (!name) {
-            nameInput.focus();
-            return;
-        }
+            let icon = iconInput.value.trim();
+            if (type === 'auto' && !icon) icon = 'auto';
 
-        if (!url) {
-            urlInput.focus();
-            return;
-        }
-
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            url = 'https://' + url;
-        }
-
-        if (type === 'upload' && uploadInput?.files[0]) {
-            const file = uploadInput.files[0];
-            console.log(`[Shortcuts] User selected file to upload: ${file.name}, size: ${file.size}, type: ${file.type}`);
-            const iconId = `local-${Date.now()}`;
-            try {
-                await ImageDB.saveImage(iconId, file);
-                console.log(`[Shortcuts] Saved local icon as ${iconId}`);
-                icon = iconId;
-            } catch (e) {
-                console.error('[Shortcuts] Failed to save local icon:', e);
-                alert('保存图片失败，请重试');
+            if (!name) {
+                nameInput.focus();
                 return;
             }
-        } else if (type === 'upload') {
-            const id = idInput.value;
-            if (id) {
-                const existing = this.shortcuts.find(s => s.id === id);
-                if (existing && existing.icon.startsWith('local-')) {
-                    icon = existing.icon;
-                }
+
+            if (!url) {
+                urlInput.focus();
+                return;
             }
-        }
 
-        // 保存时预缓存图标到 IndexedDB
-        let iconCached = false;
-        if (window.ImageDB && (type === 'auto' || type === 'custom')) {
-            // Reconstruct temp shortcut object to use helper
-            const tempShortcut = {
-                url: url,
-                icon: (type === 'auto' || !icon) ? 'auto' : icon
-            };
-            const iconUrl = this.getIconCacheKey(tempShortcut);
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
 
-            if (iconUrl && iconUrl.startsWith('http')) {
-                // 强制从网络获取并缓存
+            let iconCached = type === 'upload';
+
+            if (type === 'upload' && uploadInput?.files[0]) {
+                const file = uploadInput.files[0];
+                console.log(`[Shortcuts] User selected file to upload: ${file.name}, size: ${file.size}, type: ${file.type}`);
+                const iconId = `local-${Date.now()}`;
                 try {
-                    console.log(`[Shortcuts] Saving/Caching icon: ${iconUrl}`);
-                    const response = await fetch(iconUrl);
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        await ImageDB.saveImage(iconUrl, blob);
-                        iconCached = true;
-                        console.log(`[Shortcuts] Icon cached successfully: ${iconUrl}`);
-                    }
+                    await ImageDB.saveImage(iconId, file);
+                    console.log(`[Shortcuts] Saved local icon as ${iconId}`);
+                    icon = iconId;
                 } catch (e) {
-                    console.warn(`[Shortcuts] Failed to cache icon: ${iconUrl}`, e);
+                    console.error('[Shortcuts] Failed to save local icon:', e);
+                    alert('保存图片失败，请重试');
+                    return;
+                }
+            } else if (type === 'upload') {
+                const id = idInput.value;
+                if (id) {
+                    const existing = this.shortcuts.find(s => s.id === id);
+                    if (existing && existing.icon.startsWith('local-')) {
+                        icon = existing.icon;
+                    }
                 }
             }
-        } else if (type === 'upload') {
-            // 本地上传的图标已经保存到 IndexedDB
-            iconCached = true;
-        }
 
-        if (idInput.value) {
-            const index = this.shortcuts.findIndex(s => s.id === idInput.value);
-            if (index !== -1) {
-                const oldIcon = this.shortcuts[index].icon;
-                if (oldIcon.startsWith('local-') && oldIcon !== icon) {
-                    ImageDB.deleteImage(oldIcon).catch(console.error);
+            if (type === 'emoji') iconCached = true;
+
+            if (idInput.value) {
+                const index = this.shortcuts.findIndex(s => s.id === idInput.value);
+                if (index !== -1) {
+                    const existing = this.shortcuts[index];
+                    const oldIcon = existing.icon;
+                    if (oldIcon.startsWith('local-') && oldIcon !== icon) {
+                        ImageDB.deleteImage(oldIcon).catch(console.error);
+                    }
+
+                    if ((type === 'auto' || type === 'custom') && oldIcon === icon && existing.url === url) {
+                        iconCached = existing.iconCached === true;
+                    }
+
+                    existing.name = name;
+                    existing.url = url;
+                    existing.icon = icon;
+                    existing.iconCached = iconCached;
                 }
-
-                this.shortcuts[index].name = name;
-                this.shortcuts[index].url = url;
-                this.shortcuts[index].icon = icon;
-                this.shortcuts[index].iconCached = iconCached;
+            } else {
+                const order = this.getNextOrderForCategory(Categories.currentCategory);
+                this.shortcuts.push({
+                    id: Storage.generateId(),
+                    name,
+                    url,
+                    icon,
+                    iconCached,
+                    order,
+                    categoryId: Categories.currentCategory
+                });
             }
-        } else {
-            this.shortcuts.push({
-                id: Storage.generateId(),
-                name,
-                url,
-                icon,
-                iconCached,
-                categoryId: Categories.currentCategory
-            });
-        }
 
-        await Storage.saveShortcuts(this.shortcuts);
-        this.render();
-        this.hideModal();
+            await Storage.saveShortcuts(this.shortcuts);
+            this.render();
+            this.hideModal();
+        } finally {
+            this.isSaving = false;
+            if (saveBtn) saveBtn.disabled = false;
+        }
     },
 
     /**
@@ -709,10 +1318,155 @@ const Shortcuts = {
         }
     },
 
+    async deleteWidget(id) {
+        const widget = this.widgets.find(w => w.id === id);
+        if (confirm(`确定要删除 "${widget?.title || '小组件'}" 吗？`)) {
+            this.widgets = this.widgets.filter(w => w.id !== id);
+            await Storage.saveWidgets(this.widgets);
+            this.render();
+        }
+    },
+
+    editWidget(id) {
+        this.showModal({ kind: 'widget', id });
+    },
+
+    async saveWidget() {
+        if (this.isSaving) return;
+
+        const idInput = document.getElementById('editWidgetId');
+        const typeEl = document.getElementById('widgetType');
+        const sizeEl = document.getElementById('widgetSize');
+        const titleEl = document.getElementById('widgetTitle');
+        const noteEl = document.getElementById('widgetNoteContent');
+        const notePinnedEl = document.getElementById('widgetNotePinned');
+        const cityEl = document.getElementById('widgetWeatherCity');
+        const saveBtn = document.getElementById('saveShortcut');
+
+        this.isSaving = true;
+        if (saveBtn) saveBtn.disabled = true;
+
+        try {
+            const type = typeEl?.value || 'note';
+            const size = (sizeEl?.value === '4') ? '4' : '8';
+            const title = (titleEl?.value || '').trim() || this.getDefaultWidgetTitle(type);
+
+            let data = {};
+            if (type === 'note') {
+                data = {
+                    content: noteEl?.value || '',
+                    pinned: notePinnedEl?.checked === true
+                };
+            } else if (type === 'todo') {
+                data = { items: [] };
+            } else if (type === 'calendar') {
+                data = {};
+            } else if (type === 'weather') {
+                const city = (cityEl?.value || '').trim();
+                if (!city) {
+                    alert('请先填写城市');
+                    cityEl?.focus();
+                    return;
+                }
+                data = {
+                    city,
+                    last: null,
+                    lastFetched: null
+                };
+            }
+
+            if (idInput?.value) {
+                const index = this.widgets.findIndex(w => w.id === idInput.value);
+                if (index !== -1) {
+                    const existing = this.widgets[index];
+
+                    if (existing.type === type) {
+                        if (type === 'todo' || type === 'calendar') {
+                            data = existing.data || data;
+                        }
+                        if (type === 'weather') {
+                            const nextCity = data.city || '';
+                            const oldCity = existing.data?.city || '';
+                            data.last = existing.data?.last || null;
+                            data.lastFetched = existing.data?.lastFetched || null;
+                            if (nextCity && oldCity && nextCity !== oldCity) {
+                                data.last = null;
+                                data.lastFetched = null;
+                            }
+                        }
+                    }
+
+                    existing.type = type;
+                    existing.size = size;
+                    existing.title = title;
+                    existing.data = data;
+                }
+            } else {
+                const order = this.getNextOrderForCategory(Categories.currentCategory);
+                this.widgets.push({
+                    id: Storage.generateId(),
+                    type,
+                    size,
+                    title,
+                    data,
+                    order,
+                    categoryId: Categories.currentCategory
+                });
+            }
+
+            await Storage.saveWidgets(this.widgets);
+            await this.render();
+            this.hideModal();
+
+            // Best-effort: auto refresh weather after creation
+            if (type === 'weather') {
+                const widget = this.widgets.find(w => w.id === (idInput?.value || this.widgets[this.widgets.length - 1]?.id));
+                if (widget) this.maybeRefreshWeather(widget, true);
+            }
+        } finally {
+            this.isSaving = false;
+            if (saveBtn) saveBtn.disabled = false;
+        }
+    },
+
+    async moveWidgetToCategory(widgetId, categoryId) {
+        const index = this.widgets.findIndex(w => w.id === widgetId);
+        if (index === -1) return;
+        if (this.widgets[index].categoryId === categoryId) return;
+
+        this.widgets[index].categoryId = categoryId;
+        this.widgets[index].order = this.getNextOrderForCategory(categoryId);
+        await Storage.saveWidgets(this.widgets);
+
+        this.render();
+        Categories.render();
+    },
+
+    async moveCategoryItemsToHome(categoryId) {
+        let changed = false;
+        this.shortcuts.forEach(s => {
+            if (s.categoryId === categoryId) {
+                s.categoryId = 'home';
+                changed = true;
+            }
+        });
+        this.widgets.forEach(w => {
+            if (w.categoryId === categoryId) {
+                w.categoryId = 'home';
+                changed = true;
+            }
+        });
+        if (!changed) return;
+        await Promise.all([
+            Storage.saveShortcuts(this.shortcuts),
+            Storage.saveWidgets(this.widgets)
+        ]);
+    },
+
     /**
      * 显示模态框
      */
-    showModal(id = null) {
+    showModal(arg = null) {
         const modal = document.getElementById('shortcutModal');
         const title = document.getElementById('shortcutModalTitle');
         const nameInput = document.getElementById('shortcutName');
@@ -726,6 +1480,33 @@ const Shortcuts = {
         const uploadPreview = document.getElementById('uploadPreview');
         const previewImg = uploadPreview?.querySelector('img');
 
+        const widgetIdInput = document.getElementById('editWidgetId');
+        const widgetType = document.getElementById('widgetType');
+        const widgetSize = document.getElementById('widgetSize');
+        const widgetTitle = document.getElementById('widgetTitle');
+        const widgetNote = document.getElementById('widgetNoteContent');
+        const widgetPinned = document.getElementById('widgetNotePinned');
+        const widgetCity = document.getElementById('widgetWeatherCity');
+
+        let kind = 'shortcut';
+        let id = arg;
+        if (arg && typeof arg === 'object') {
+            kind = arg.kind || 'shortcut';
+            id = arg.id || null;
+        }
+
+        this.setAddItemTab(kind === 'widget' ? 'widget' : 'shortcut');
+
+        // reset widget form
+        if (widgetIdInput) widgetIdInput.value = '';
+        if (widgetType) widgetType.value = 'note';
+        if (widgetSize) widgetSize.value = '8';
+        if (widgetTitle) widgetTitle.value = '';
+        if (widgetNote) widgetNote.value = '';
+        if (widgetPinned) widgetPinned.checked = false;
+        if (widgetCity) widgetCity.value = '';
+        this.updateWidgetFieldVisibility('note');
+
         nameInput.value = '';
         urlInput.value = '';
         iconInput.value = '';
@@ -738,6 +1519,34 @@ const Shortcuts = {
         document.querySelector('.icon-option[data-type="auto"]').classList.add('active');
         iconInput.style.display = 'none';
         emojiPicker.style.display = 'none';
+
+        if (kind === 'widget') {
+            if (id) {
+                const widget = this.widgets.find(w => w.id === id);
+                if (widget) {
+                    title.textContent = '?? 编辑小组件';
+                    if (widgetIdInput) widgetIdInput.value = widget.id;
+                    if (widgetType) widgetType.value = widget.type || 'note';
+                    if (widgetSize) widgetSize.value = (widget.size === '4' || widget.size === 4) ? '4' : '8';
+                    if (widgetTitle) widgetTitle.value = widget.title || this.getDefaultWidgetTitle(widget.type);
+
+                    this.updateWidgetFieldVisibility(widget.type || 'note');
+                    if (widget.type === 'note') {
+                        if (widgetNote) widgetNote.value = widget.data?.content || '';
+                        if (widgetPinned) widgetPinned.checked = widget.data?.pinned === true;
+                    } else if (widget.type === 'weather') {
+                        if (widgetCity) widgetCity.value = widget.data?.city || '';
+                    }
+                }
+            } else {
+                title.textContent = '? 添加小组件';
+                if (widgetTitle && widgetType) widgetTitle.value = this.getDefaultWidgetTitle(widgetType.value || 'note');
+            }
+
+            modal.classList.add('show');
+            widgetTitle?.focus();
+            return;
+        }
 
         if (id) {
             const shortcut = this.shortcuts.find(s => s.id === id);
@@ -764,7 +1573,7 @@ const Shortcuts = {
                     if (uploadPreview && previewImg) {
                         uploadPreview.style.display = 'flex';
                         ImageDB.getImage(shortcut.icon).then(blob => {
-                            if (blob) previewImg.src = URL.createObjectURL(blob);
+                            if (blob) previewImg.src = ImageDB.getObjectUrl(shortcut.icon, blob);
                         });
                     }
                 } else {
@@ -791,6 +1600,26 @@ const Shortcuts = {
         nameInput.focus();
     },
 
+    setAddItemTab(tab) {
+        const tabShortcut = document.getElementById('addTabShortcut');
+        const tabWidget = document.getElementById('addTabWidget');
+        const panelShortcut = document.getElementById('addPanelShortcut');
+        const panelWidget = document.getElementById('addPanelWidget');
+        if (!tabShortcut || !tabWidget || !panelShortcut || !panelWidget) return;
+
+        this.activeAddTab = tab === 'widget' ? 'widget' : 'shortcut';
+        tabShortcut.classList.toggle('active', this.activeAddTab === 'shortcut');
+        tabWidget.classList.toggle('active', this.activeAddTab === 'widget');
+        panelShortcut.style.display = this.activeAddTab === 'shortcut' ? '' : 'none';
+        panelWidget.style.display = this.activeAddTab === 'widget' ? '' : 'none';
+    },
+
+    updateWidgetFieldVisibility(type) {
+        document.querySelectorAll('.widget-field').forEach(el => {
+            el.style.display = el.getAttribute('data-widget') === type ? '' : 'none';
+        });
+    },
+
     /**
      * 隐藏模态框
      */
@@ -813,15 +1642,19 @@ const Shortcuts = {
 
     /**
      * 更新图标候选列表
+     * 只使用三个来源：Google API、DuckDuckGo、网站直接获取
      */
     async updateIconCandidates(url) {
         const container = document.getElementById('iconCandidates');
         if (!container) return;
 
+        const requestId = ++this.iconCandidateRequestId;
+
         let hostname = '';
+        let fullUrl = url;
         try {
-            if (!url.startsWith('http')) url = 'https://' + url;
-            hostname = new URL(url).hostname;
+            if (!url.startsWith('http')) fullUrl = 'https://' + url;
+            hostname = new URL(fullUrl).hostname;
         } catch (e) {
             container.style.display = 'none';
             return;
@@ -830,22 +1663,72 @@ const Shortcuts = {
         container.style.display = 'grid';
         container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 10px; font-size: 12px; color: var(--text-muted);">正在获取图标...</div>';
 
-        const providers = [
-            `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`,
-            `https://icons.duckduckgo.com/ip3/${hostname}.ico`,
-            `https://api.faviconkit.com/${hostname}/128`,
-            `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`,
-            `https://${hostname}/favicon.ico`
-        ];
-
-        container.innerHTML = '';
         const seenIcons = new Set();
+        const candidates = [];
 
-        const addCandidate = (iconUrl) => {
-            // Deduplication based on URL (simple start)
+        const addCandidate = (iconUrl, priority = 0) => {
             if (seenIcons.has(iconUrl)) return;
             seenIcons.add(iconUrl);
+            candidates.push({ url: iconUrl, priority });
+        };
 
+        // 来源1: Google Favicon API (高清 128px)
+        addCandidate(`https://www.google.com/s2/favicons?domain=${hostname}&sz=128`, 1);
+
+        // 来源2: DuckDuckGo
+        addCandidate(`https://icons.duckduckgo.com/ip3/${hostname}.ico`, 2);
+
+        // 来源3: 直接从网站获取 (尝试多种常见路径)
+        const baseUrl = `https://${hostname}`;
+        addCandidate(`${baseUrl}/apple-touch-icon.png`, 0); // 通常是最高清的
+        addCandidate(`${baseUrl}/favicon.ico`, 3);
+
+        // 尝试从网站 HTML 中解析更多图标
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500);
+            const response = await fetch(fullUrl, {
+                mode: 'cors',
+                headers: { 'Accept': 'text/html' },
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (response.ok) {
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // 查找 apple-touch-icon (最高清)
+                const appleIcon = doc.querySelector('link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]');
+                if (appleIcon && appleIcon.href) {
+                    const iconUrl = new URL(appleIcon.getAttribute('href'), fullUrl).href;
+                    addCandidate(iconUrl, -1); // 最高优先级
+                }
+
+                // 查找大尺寸 icon
+                const largeIcons = doc.querySelectorAll('link[rel="icon"][sizes], link[rel="shortcut icon"]');
+                largeIcons.forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href) {
+                        const iconUrl = new URL(href, fullUrl).href;
+                        const sizes = link.getAttribute('sizes');
+                        // 优先大尺寸
+                        const priority = sizes ? (parseInt(sizes) >= 128 ? 0 : 2) : 2;
+                        addCandidate(iconUrl, priority);
+                    }
+                });
+            }
+        } catch (e) {
+            console.log('[Shortcuts] Could not fetch HTML for icons:', e.message);
+        }
+
+        if (requestId !== this.iconCandidateRequestId) return;
+
+        // 按优先级排序并渲染
+        candidates.sort((a, b) => a.priority - b.priority);
+
+        container.innerHTML = '';
+        candidates.forEach(({ url: iconUrl }) => {
             const div = document.createElement('div');
             div.className = 'icon-candidate';
             div.dataset.url = iconUrl;
@@ -853,16 +1736,13 @@ const Shortcuts = {
             const img = document.createElement('img');
             img.src = iconUrl;
             img.alt = 'icon';
-            img.onerror = () => div.remove(); // Compliant handler
+            img.onerror = () => div.remove();
 
             div.appendChild(img);
             container.appendChild(div);
-        };
+        });
 
-        // Add initial providers
-        providers.forEach(addCandidate);
-
-        // Add Search Button
+        // 添加搜索按钮
         const searchBtn = document.createElement('div');
         searchBtn.className = 'icon-candidate search-icon-btn';
         searchBtn.title = '在网页中搜索图标';
@@ -875,18 +1755,9 @@ const Shortcuts = {
         searchBtn.onclick = (e) => {
             e.stopPropagation();
             const query = hostname.split('.').filter(p => p !== 'com' && p !== 'google' && p !== 'www').join(' ');
-            window.open(`https://www.google.com/search?q=${encodeURIComponent(query + ' logo favicon overlay:1')}&tbm=isch`, '_blank');
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(query + ' logo icon png')}&tbm=isch`, '_blank');
         };
         container.appendChild(searchBtn);
-
-        // Try to get more from favicongrabber
-        try {
-            const resp = await fetch(`https://favicongrabber.com/api/grab/${hostname}`);
-            const data = await resp.json();
-            if (data.icons && data.icons.length > 0) {
-                data.icons.slice(0, 5).forEach(icon => addCandidate(icon.src));
-            }
-        } catch (e) { }
     },
 
     /**

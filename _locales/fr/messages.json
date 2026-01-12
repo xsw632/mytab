@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "MyTab - Nouvel onglet"
+  },
+  "extDescription": {
+    "message": "Une extension de nouvel onglet belle et riche en fonctionnalités, avec fonds d’écran, raccourcis et gestion par catégories."
+  },
+  "actionTitle": {
+    "message": "Paramètres MyTab"
+  }
+}

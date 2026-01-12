@@ -154,6 +154,8 @@ const App = {
                     Categories.edit(target.id);
                 } else if (target.type === 'shortcut') {
                     Shortcuts.edit(target.id);
+                } else if (target.type === 'widget') {
+                    Shortcuts.editWidget(target.id);
                 }
             }
             contextMenu.classList.remove('show');
@@ -166,6 +168,8 @@ const App = {
                     Categories.delete(target.id);
                 } else if (target.type === 'shortcut') {
                     Shortcuts.delete(target.id);
+                } else if (target.type === 'widget') {
+                    Shortcuts.deleteWidget(target.id);
                 }
             }
             contextMenu.classList.remove('show');

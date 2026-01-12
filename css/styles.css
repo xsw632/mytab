@@ -410,6 +410,8 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
+  grid-auto-flow: dense;
+  grid-auto-rows: 110px;
 }
 
 .shortcut-card {
@@ -423,6 +425,7 @@ body {
   cursor: pointer;
   transition: all var(--transition-normal);
   text-decoration: none;
+  height: 100%;
 }
 
 .shortcut-card:hover {
@@ -455,6 +458,237 @@ body {
 
 .shortcut-card:hover .shortcut-icon img {
   transform: scale(1.15);
+}
+
+.shortcut-card.drag-over {
+  outline: 2px dashed rgba(255, 255, 255, 0.5);
+  outline-offset: 4px;
+}
+
+.widget-card {
+  align-items: stretch;
+  padding: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.9)),
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.03) 1px, transparent 1px, transparent 26px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  color: #111827;
+  text-shadow: none;
+  transform: translateY(0);
+}
+
+.widget-card:hover {
+  transform: translateY(-4px);
+}
+
+.widget-size-4 {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+.widget-size-8 {
+  grid-column: span 4;
+  grid-row: span 2;
+}
+
+.widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.widget-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-badge {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.widget-body {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #111827;
+  overflow: hidden;
+}
+
+.widget-card .shortcut-name {
+  color: #111827;
+  text-shadow: none;
+}
+
+.widget-action {
+  background: rgba(17, 24, 39, 0.06);
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  color: #111827;
+  border-radius: 10px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.widget-action:hover {
+  background: rgba(17, 24, 39, 0.1);
+}
+
+.note-content {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.note-placeholder {
+  color: rgba(17, 24, 39, 0.6);
+}
+
+.note-content code {
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(17, 24, 39, 0.08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+}
+
+.todo-count {
+  width: 100%;
+  opacity: 0.95;
+}
+
+.todo-list {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.todo-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.todo-title {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.todo-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+}
+
+.todo-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-empty {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.todo-actions {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.wx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wx-city {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wx-temp {
+  margin-top: 6px;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.wx-unit {
+  font-size: 14px;
+  font-weight: 700;
+  margin-left: 4px;
+  opacity: 0.8;
+}
+
+.wx-meta {
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.65);
+}
+
+.cal-meta {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.7);
+  margin-bottom: 8px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.cal-head {
+  font-size: 11px;
+  color: rgba(17, 24, 39, 0.6);
+  text-align: center;
+}
+
+.cal-cell {
+  font-size: 12px;
+  text-align: center;
+  padding: 6px 0;
+  border-radius: 8px;
+  background: rgba(17, 24, 39, 0.04);
+}
+
+.cal-cell.empty {
+  background: transparent;
+}
+
+.cal-cell.today {
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  font-weight: 700;
 }
 
 
@@ -653,6 +887,39 @@ body {
   max-height: calc(85vh - 80px);
 }
 
+.modal-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.modal-tab {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.modal-tab:hover {
+  border-color: var(--primary-color);
+}
+
+.modal-tab.active {
+  background: var(--primary-light);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.add-item-panel {
+  display: block;
+}
+
 /* Settings Groups */
 .settings-group {
   margin-bottom: 28px;
@@ -791,6 +1058,50 @@ body {
   color: var(--text-primary);
   outline: none;
   transition: border-color var(--transition-fast);
+}
+
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  background: var(--surface);
+  transition: border-color var(--transition-fast);
+}
+
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 10px;
+  user-select: none;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-color);
+}
+
+.form-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 10px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .form-group input[type="text"]:focus {
