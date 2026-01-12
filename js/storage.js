@@ -10,6 +10,7 @@ const Storage = {
       searchEngine: 'google',
       clockFormat: '24',
       showSeconds: false,
+      language: 'zh_CN',
       showSidebar: true,
       showClock: true,
       showSearch: true,

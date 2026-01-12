@@ -64,6 +64,9 @@ const Settings = {
         const data = await Storage.getAll();
         this.settings = data.settings;
         console.log('Loaded settings:', this.settings);
+        if (window.I18N) {
+            I18N.apply(this.settings.language);
+        }
         this.applySettings();
         this.renderWallpaperGrid();
         this.bindEvents();
@@ -74,6 +77,15 @@ const Settings = {
      * 应用设置
      */
     applySettings() {
+        if (window.I18N) {
+            I18N.apply(this.settings.language);
+        }
+        if (window.Categories?.applyLanguage) {
+            Categories.applyLanguage().then(() => {
+                if (window.Categories?.render) Categories.render();
+                if (window.Shortcuts?.render) Shortcuts.render();
+            });
+        }
         // 应用壁纸
         this.applyWallpaper();
 
@@ -87,6 +99,12 @@ const Settings = {
 
         if (sidebar) {
             sidebar.classList.toggle('collapsed', !this.settings.showSidebar);
+        }
+        const toggleSidebarBtn = document.getElementById('toggleSidebar');
+        if (toggleSidebarBtn) {
+            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+            const isCollapsed = sidebar?.classList.contains('collapsed');
+            toggleSidebarBtn.title = isCollapsed ? t('toggleSidebarExpand', '展开侧边栏') : t('toggleSidebarCollapse', '收起侧边栏');
         }
         if (clockSection) {
             clockSection.style.display = this.settings.showClock ? '' : 'none';
@@ -196,6 +214,7 @@ const Settings = {
         const clockFormat = document.getElementById('clockFormat');
         const showSeconds = document.getElementById('showSeconds');
         const defaultEngine = document.getElementById('defaultSearchEngine');
+        const languageSelect = document.getElementById('languageSelect');
         const showSidebar = document.getElementById('showSidebar');
         const showClock = document.getElementById('showClock');
         const showSearch = document.getElementById('showSearch');
@@ -203,6 +222,7 @@ const Settings = {
         if (clockFormat) clockFormat.value = this.settings.clockFormat || '24';
         if (showSeconds) showSeconds.checked = this.settings.showSeconds || false;
         if (defaultEngine) defaultEngine.value = this.settings.searchEngine || 'google';
+        if (languageSelect) languageSelect.value = this.settings.language || 'zh_CN';
         if (showSidebar) showSidebar.checked = this.settings.showSidebar !== false;
         if (showClock) showClock.checked = this.settings.showClock !== false;
         if (showSearch) showSearch.checked = this.settings.showSearch !== false;
@@ -379,6 +399,23 @@ const Settings = {
                 if (searchSection) {
                     searchSection.style.display = e.target.checked ? '' : 'none';
                 }
+            });
+        }
+
+        const languageSelect = document.getElementById('languageSelect');
+        if (languageSelect) {
+            languageSelect.addEventListener('change', async (e) => {
+                this.settings.language = e.target.value;
+                await Storage.saveSettings(this.settings);
+                if (window.I18N) {
+                    I18N.apply(this.settings.language);
+                }
+                if (window.Categories?.applyLanguage) {
+                    await Categories.applyLanguage();
+                }
+                if (window.Categories?.render) Categories.render();
+                if (window.Shortcuts?.render) Shortcuts.render();
+                App.updateClock();
             });
         }
     }

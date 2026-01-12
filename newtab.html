@@ -21,8 +21,8 @@
     <!-- 侧边栏 -->
     <aside class="sidebar collapsed" id="sidebar">
       <div class="sidebar-header">
-        <h2><span>📑 分类</span></h2>
-        <button class="btn-icon" id="toggleSidebar" title="收起侧边栏">
+        <h2><span>📑 <span data-i18n="sidebarTitle">分类</span></span></h2>
+        <button class="btn-icon" id="toggleSidebar" title="收起侧边栏" data-i18n-title="toggleSidebarCollapse">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 18l-6-6 6-6" />
           </svg>
@@ -35,7 +35,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 5v14M5 12h14" />
         </svg>
-        添加分类
+        <span data-i18n="addCategory">添加分类</span>
       </button>
     </aside>
 
@@ -58,7 +58,7 @@
               <path d="M6 9l6 6 6-6" />
             </svg>
           </div>
-          <input type="text" class="search-input" id="searchInput" placeholder="搜索内容..." autocomplete="off">
+          <input type="text" class="search-input" id="searchInput" placeholder="搜索内容..." autocomplete="off" data-i18n-placeholder="searchPlaceholder">
           <button class="search-btn" id="searchBtn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8" />
@@ -90,7 +90,7 @@
       <!-- 快捷链接网格 -->
       <section class="shortcuts-section">
         <div class="shortcuts-header">
-          <h3 id="currentCategoryName">首页</h3>
+          <h3 id="currentCategoryName" data-i18n="currentCategoryHome">首页</h3>
         </div>
         <div class="shortcuts-grid" id="shortcutsGrid">
           <!-- 快捷链接由 JS 动态生成 -->
@@ -100,7 +100,7 @@
   </div>
 
   <!-- 设置按钮 -->
-  <button class="settings-btn" id="settingsBtn" title="设置">
+  <button class="settings-btn" id="settingsBtn" title="设置" data-i18n-title="settings">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="12" r="3" />
       <path
@@ -112,7 +112,7 @@
   <div class="modal-overlay" id="settingsModal">
     <div class="modal">
       <div class="modal-header">
-        <h2>⚙️ 设置</h2>
+        <h2 data-i18n="settingsTitle">设置</h2>
         <button class="btn-close" id="closeSettings">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6L6 18M6 6l12 12" />
@@ -122,38 +122,38 @@
       <div class="modal-body">
         <!-- 壁纸设置 -->
         <div class="settings-group">
-          <h3>🖼️ 壁纸</h3>
+          <h3 data-i18n="wallpaper">壁纸</h3>
           <div class="wallpaper-grid" id="wallpaperGrid">
             <!-- 壁纸选项由 JS 生成 -->
           </div>
           <div class="custom-wallpaper">
-            <label>自定义壁纸 URL:</label>
-            <input type="text" id="customWallpaperUrl" placeholder="输入图片链接...">
-            <button class="btn-primary" id="applyCustomWallpaper">应用</button>
+            <label data-i18n="customWallpaper">自定义壁纸</label>
+            <input type="text" id="customWallpaperUrl" placeholder="输入图片链接..." data-i18n-placeholder="customWallpaperPlaceholder">
+            <button class="btn-primary" id="applyCustomWallpaper" data-i18n="apply">应用</button>
           </div>
         </div>
 
         <!-- 时钟设置 -->
         <div class="settings-group">
-          <h3>⏰ 时钟</h3>
+          <h3 data-i18n="clock">时钟</h3>
           <div class="setting-row">
-            <label>时间格式:</label>
+            <label data-i18n="clockFormat">时钟格式</label>
             <select id="clockFormat">
-              <option value="24">24小时制</option>
-              <option value="12">12小时制</option>
+              <option value="24" data-i18n="clockFormat24">24小时制</option>
+              <option value="12" data-i18n="clockFormat12">12小时制</option>
             </select>
           </div>
           <div class="setting-row">
-            <label>显示秒数:</label>
+            <label data-i18n="showSeconds">显示秒数</label>
             <input type="checkbox" id="showSeconds">
           </div>
         </div>
 
         <!-- 搜索设置 -->
         <div class="settings-group">
-          <h3>🔍 搜索</h3>
+          <h3 data-i18n="search">搜索</h3>
           <div class="setting-row">
-            <label>默认搜索引擎:</label>
+            <label data-i18n="defaultSearchEngine">默认搜索引擎</label>
             <select id="defaultSearchEngine">
               <option value="google">Google</option>
               <option value="bing">Bing</option>
@@ -163,19 +163,34 @@
           </div>
         </div>
 
+        <!-- 语言设置 -->
+        <div class="settings-group">
+          <h3 data-i18n="language">语言</h3>
+          <div class="setting-row">
+            <label data-i18n="language">语言</label>
+            <select id="languageSelect">
+              <option value="zh_CN">中文</option>
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+              <option value="es">Español</option>
+              <option value="ja">日本語</option>
+            </select>
+          </div>
+        </div>
+
         <!-- 显示设置 -->
         <div class="settings-group">
-          <h3>👁️ 显示</h3>
+          <h3 data-i18n="display">显示</h3>
           <div class="setting-row">
-            <label>显示侧边栏:</label>
+            <label data-i18n="showSidebar">显示侧边栏</label>
             <input type="checkbox" id="showSidebar" checked>
           </div>
           <div class="setting-row">
-            <label>显示时钟:</label>
+            <label data-i18n="showClock">显示时钟</label>
             <input type="checkbox" id="showClock" checked>
           </div>
           <div class="setting-row">
-            <label>显示搜索栏:</label>
+            <label data-i18n="showSearch">显示搜索栏</label>
             <input type="checkbox" id="showSearch" checked>
           </div>
         </div>
@@ -187,7 +202,7 @@
   <div class="modal-overlay" id="shortcutModal">
     <div class="modal modal-sm">
       <div class="modal-header">
-        <h2 id="shortcutModalTitle">➕ 添加快捷方式</h2>
+        <h2 id="shortcutModalTitle" data-i18n="addShortcutTitle">添加快捷方式</h2>
         <button class="btn-close" id="closeShortcutModal">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6L6 18M6 6l12 12" />
@@ -196,49 +211,49 @@
       </div>
       <div class="modal-body">
         <div class="modal-tabs" id="addItemTabs">
-          <button type="button" class="modal-tab active" data-tab="shortcut" id="addTabShortcut">快捷方式</button>
-          <button type="button" class="modal-tab" data-tab="widget" id="addTabWidget">小组件</button>
+          <button type="button" class="modal-tab active" data-tab="shortcut" id="addTabShortcut" data-i18n="tabShortcut">快捷方式</button>
+          <button type="button" class="modal-tab" data-tab="widget" id="addTabWidget" data-i18n="tabWidget">小组件</button>
         </div>
 
         <div class="add-item-panel" id="addPanelShortcut">
         <input type="hidden" id="editShortcutId">
         <div class="form-group">
-          <label for="shortcutName">名称:</label>
-          <input type="text" id="shortcutName" placeholder="例如：Google">
+          <label for="shortcutName" data-i18n="name">名称</label>
+          <input type="text" id="shortcutName" placeholder="例如：Google" data-i18n-placeholder="shortcutNamePlaceholder">
         </div>
         <div class="form-group">
-          <label for="shortcutUrl">网址:</label>
-          <input type="text" id="shortcutUrl" placeholder="例如：https://google.com">
+          <label for="shortcutUrl" data-i18n="url">网址</label>
+          <input type="text" id="shortcutUrl" placeholder="例如：https://google.com" data-i18n-placeholder="shortcutUrlPlaceholder">
         </div>
         <div class="form-group">
-          <label>图标:</label>
+          <label data-i18n="icon">图标</label>
           <div class="icon-options">
             <div class="icon-option active" data-type="auto">
-              <span>🔄 自动获取</span>
+              <span>🔄 <span data-i18n="iconAuto">自动获取</span></span>
             </div>
             <div class="icon-option" data-type="custom">
-              <span>🔗 自定义URL</span>
+              <span>🔗 <span data-i18n="iconCustom">自定义URL</span></span>
             </div>
             <div class="icon-option" data-type="emoji">
-              <span>😀 表情符号</span>
+              <span>😀 <span data-i18n="iconEmoji">表情符号</span></span>
             </div>
             <div class="icon-option" data-type="upload">
-              <span>📤 本地上传</span>
+              <span>📤 <span data-i18n="iconUpload">本地上传</span></span>
             </div>
           </div>
           <div id="iconCandidates" class="icon-candidates" style="display:none;"></div>
-          <input type="text" id="shortcutIcon" placeholder="图标URL或表情符号" style="display:none;">
+          <input type="text" id="shortcutIcon" placeholder="图标URL或表情符号" style="display:none;" data-i18n-placeholder="shortcutIconPlaceholder">
           <input type="file" id="iconUploadInput" accept="image/*" style="display:none;">
           <div id="uploadPreview" class="upload-preview" style="display:none;">
             <img src="" alt="预览">
-            <span id="removeUpload">移除</span>
+            <span id="removeUpload" data-i18n="removeUpload">移除</span>
           </div>
           <div id="emojiPicker" class="emoji-picker" style="display:none;">
             <div class="emoji-categories">
-              <span class="emoji-cat-btn active" data-cat="common">常用</span>
-              <span class="emoji-cat-btn" data-cat="smileys">表情</span>
-              <span class="emoji-cat-btn" data-cat="nature">自然</span>
-              <span class="emoji-cat-btn" data-cat="objects">物品</span>
+              <span class="emoji-cat-btn active" data-cat="common" data-i18n="emojiCatCommon">常用</span>
+              <span class="emoji-cat-btn" data-cat="smileys" data-i18n="emojiCatSmileys">表情</span>
+              <span class="emoji-cat-btn" data-cat="nature" data-i18n="emojiCatNature">自然</span>
+              <span class="emoji-cat-btn" data-cat="objects" data-i18n="emojiCatObjects">物品</span>
             </div>
             <div class="emoji-grid" id="emojiGrid">
               <!-- Emojis will be inserted here by JS -->
@@ -250,51 +265,51 @@
         <div class="add-item-panel" id="addPanelWidget" style="display:none;">
           <input type="hidden" id="editWidgetId">
           <div class="form-group">
-            <label for="widgetType">类型:</label>
+            <label for="widgetType" data-i18n="widgetType">类型</label>
             <select id="widgetType">
-              <option value="todo">待办（今日/本周）</option>
-              <option value="note" selected>便签（Markdown 简版）</option>
-              <option value="calendar">日历</option>
-              <option value="weather">天气</option>
+              <option value="todo" data-i18n="widgetTypeTodoOption">待办（今日/本周）</option>
+              <option value="note" selected data-i18n="widgetTypeNoteOption">便签（Markdown 简版）</option>
+              <option value="calendar" data-i18n="widgetTypeCalendarOption">日历</option>
+              <option value="weather" data-i18n="widgetTypeWeatherOption">天气</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="widgetSize">大小:</label>
+            <label for="widgetSize" data-i18n="widgetSize">大小</label>
             <select id="widgetSize">
               <option value="4">4x4</option>
               <option value="8" selected>8x8</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="widgetTitle">标题:</label>
-            <input type="text" id="widgetTitle" placeholder="例如：我的待办 / 便签 / 天气">
+            <label for="widgetTitle" data-i18n="widgetTitle">标题</label>
+            <input type="text" id="widgetTitle" placeholder="例如：我的待办 / 便签 / 天气" data-i18n-placeholder="widgetTitlePlaceholder">
           </div>
 
           <div class="form-group widget-field" data-widget="note">
-            <label for="widgetNoteContent">内容（支持 Markdown 简版）:</label>
-            <textarea id="widgetNoteContent" rows="6" placeholder="例如：&#10;**重点**&#10;- 今天要做的事&#10;`代码`"></textarea>
+            <label for="widgetNoteContent" data-i18n="widgetNoteContent">内容（支持 Markdown 简版）</label>
+            <textarea id="widgetNoteContent" rows="6" placeholder="例如：&#10;**重点**&#10;- 今天要做的事&#10;`代码`" data-i18n-placeholder="widgetNotePlaceholder"></textarea>
             <label class="checkbox-row">
               <input type="checkbox" id="widgetNotePinned">
-              置顶便签
+              <span data-i18n="widgetPinned">置顶便签</span>
             </label>
           </div>
 
           <div class="form-group widget-field" data-widget="weather" style="display:none;">
-            <label for="widgetWeatherCity">城市:</label>
-            <input type="text" id="widgetWeatherCity" placeholder="例如：北京 / 上海 / Shenzhen">
+            <label for="widgetWeatherCity" data-i18n="widgetCity">城市</label>
+            <input type="text" id="widgetWeatherCity" placeholder="例如：北京 / 上海 / Shenzhen" data-i18n-placeholder="widgetWeatherCityPlaceholder">
           </div>
 
           <div class="form-group widget-field" data-widget="todo" style="display:none;">
-            <div class="form-hint">创建后可在小组件上直接勾选/添加待办。</div>
+            <div class="form-hint" data-i18n="widgetTodoHint">创建后可在小组件上直接勾选/添加待办。</div>
           </div>
 
           <div class="form-group widget-field" data-widget="calendar" style="display:none;">
-            <div class="form-hint">日历小组件为本地展示，无需额外设置。</div>
+            <div class="form-hint" data-i18n="widgetCalendarHint">日历小组件为本地展示，无需额外设置。</div>
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn-secondary" id="cancelShortcut">取消</button>
-          <button class="btn-primary" id="saveShortcut">保存</button>
+          <button class="btn-secondary" id="cancelShortcut" data-i18n="cancel">取消</button>
+          <button class="btn-primary" id="saveShortcut" data-i18n="save">保存</button>
         </div>
       </div>
     </div>
@@ -304,7 +319,7 @@
   <div class="modal-overlay" id="categoryModal">
     <div class="modal modal-sm">
       <div class="modal-header">
-        <h2 id="categoryModalTitle">➕ 添加分类</h2>
+        <h2 id="categoryModalTitle" data-i18n="categoryAddTitle">➕ 添加分类</h2>
         <button class="btn-close" id="closeCategoryModal">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6L6 18M6 6l12 12" />
@@ -314,18 +329,18 @@
       <div class="modal-body">
         <input type="hidden" id="editCategoryId">
         <div class="form-group">
-          <label for="categoryName">分类名称:</label>
-          <input type="text" id="categoryName" placeholder="例如：工作">
+          <label for="categoryName" data-i18n="categoryNameLabel">分类名称：</label>
+          <input type="text" id="categoryName" placeholder="例如：工作" data-i18n-placeholder="categoryNamePlaceholder">
         </div>
         <div class="form-group">
-          <label for="categoryIcon">图标 (表情符号):</label>
-          <input type="text" id="categoryIcon" placeholder="例如：💼" maxlength="2">
+          <label for="categoryIcon" data-i18n="categoryIconLabel">图标（表情符号）：</label>
+          <input type="text" id="categoryIcon" placeholder="例如：📁" maxlength="2" data-i18n-placeholder="categoryIconPlaceholder">
           <div id="categoryEmojiPicker" class="emoji-picker" style="margin-top: 10px;">
             <div class="emoji-categories">
-              <span class="emoji-cat-btn active" data-cat="common">常用</span>
-              <span class="emoji-cat-btn" data-cat="smileys">表情</span>
-              <span class="emoji-cat-btn" data-cat="nature">自然</span>
-              <span class="emoji-cat-btn" data-cat="objects">物品</span>
+              <span class="emoji-cat-btn active" data-cat="common" data-i18n="emojiCatCommon">常用</span>
+              <span class="emoji-cat-btn" data-cat="smileys" data-i18n="emojiCatSmileys">表情</span>
+              <span class="emoji-cat-btn" data-cat="nature" data-i18n="emojiCatNature">自然</span>
+              <span class="emoji-cat-btn" data-cat="objects" data-i18n="emojiCatObjects">物品</span>
             </div>
             <div class="emoji-grid" id="categoryEmojiGrid">
               <!-- Emojis will be inserted here by JS -->
@@ -333,8 +348,8 @@
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn-secondary" id="cancelCategory">取消</button>
-          <button class="btn-primary" id="saveCategory">保存</button>
+          <button class="btn-secondary" id="cancelCategory" data-i18n="cancel">取消</button>
+          <button class="btn-primary" id="saveCategory" data-i18n="save">保存</button>
         </div>
       </div>
     </div>
@@ -347,18 +362,19 @@
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
       </svg>
-      编辑
+      <span data-i18n="contextEdit">编辑</span>
     </div>
     <div class="context-menu-item danger" id="deleteItem">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
       </svg>
-      删除
+      <span data-i18n="contextDelete">删除</span>
     </div>
   </div>
 
   <!-- JavaScript -->
   <script src="js/db.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/categories.js"></script>
   <script src="js/shortcuts.js"></script>

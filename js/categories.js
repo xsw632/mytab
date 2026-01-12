@@ -14,8 +14,21 @@ const Categories = {
         const data = await Storage.getAll();
         this.categories = data.categories;
         this.currentCategory = data.currentCategory;
+        await this.applyLanguage();
         this.render();
         this.bindEvents();
+    },
+
+    async applyLanguage() {
+        if (!window.I18N) return;
+        const home = this.categories.find(c => c.id === 'home' && c.isDefault);
+        if (!home) return;
+
+        const desiredName = I18N.t('currentCategoryHome');
+        if (home.name === desiredName) return;
+
+        home.name = desiredName;
+        await Storage.saveCategories(this.categories);
     },
 
     /**
@@ -196,13 +209,13 @@ const Categories = {
         if (categoryId) {
             const cat = this.categories.find(c => c.id === categoryId);
             if (cat) {
-                title.textContent = '✏️ 编辑分类';
+                title.textContent = window.I18N ? I18N.t('categoryEditTitle') : '✏️ 编辑分类';
                 idInput.value = categoryId;
                 nameInput.value = cat.name;
                 iconInput.value = cat.icon;
             }
         } else {
-            title.textContent = '➕ 添加分类';
+            title.textContent = window.I18N ? I18N.t('categoryAddTitle') : '➕ 添加分类';
             idInput.value = '';
             nameInput.value = '';
             iconInput.value = '';
@@ -287,7 +300,11 @@ const Categories = {
         const cat = this.categories.find(c => c.id === id);
         if (cat?.isDefault) return;
 
-        if (confirm(`确定要删除分类 "${cat?.name}" 吗？该分类下的快捷方式将移至首页。`)) {
+        const homeName = this.categories.find(c => c.id === 'home')?.name || (window.I18N ? I18N.t('currentCategoryHome') : '首页');
+        const msg = window.I18N
+            ? I18N.format('confirmDeleteCategory', { name: cat?.name || '', home: homeName })
+            : `确定要删除分类 "${cat?.name}" 吗？该分类下的快捷方式将移至首页。`;
+        if (confirm(msg)) {
             // 将该分类的快捷方式移至首页
             await Shortcuts.moveCategoryItemsToHome(id);
 

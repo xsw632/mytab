@@ -269,6 +269,7 @@ const Shortcuts = {
             return this.getWidgetCardHtml(widget);
         }).join('');
 
+        const addLabel = window.I18N ? I18N.t('addShortcut') : '添加快捷';
         const addBtnHtml = `
       <div class="shortcut-card btn-add-shortcut" id="addShortcutBtn">
         <div class="shortcut-icon" style="border: 2px dashed rgba(255,255,255,0.2); background: transparent;">
@@ -276,7 +277,7 @@ const Shortcuts = {
             <path d="M12 5v14M5 12h14" />
           </svg>
         </div>
-        <span class="shortcut-name">添加快捷</span>
+        <span class="shortcut-name">${this.escapeHtml(addLabel)}</span>
       </div>
     `;
 
@@ -629,7 +630,8 @@ const Shortcuts = {
             const items = Array.isArray(widget?.data?.items) ? widget.data.items : [];
             const today = items.filter(i => i.scope !== 'week');
             const week = items.filter(i => i.scope === 'week');
-            const countLine = `今天 ${today.filter(i => i.done).length}/${today.length} · 本周 ${week.filter(i => i.done).length}/${week.length}`;
+            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+            const countLine = `${t('todoToday', '今天')} ${today.filter(i => i.done).length}/${today.length} · ${t('todoWeek', '本周')} ${week.filter(i => i.done).length}/${week.length}`;
 
             const renderTodoItem = (item) => {
                 const checked = item.done ? 'checked' : '';
@@ -643,17 +645,17 @@ const Shortcuts = {
                     <div class="todo-count">${this.escapeHtml(countLine)}</div>
                     <div class="todo-list">
                       <div class="todo-group">
-                        <div class="todo-title">今天</div>
-                        ${today.slice(0, 4).map(renderTodoItem).join('') || '<div class="todo-empty">暂无</div>'}
+                        <div class="todo-title">${this.escapeHtml(t('todoToday', '今天'))}</div>
+                        ${today.slice(0, 4).map(renderTodoItem).join('') || `<div class="todo-empty">${this.escapeHtml(t('todoNone', '暂无'))}</div>`}
                       </div>
                       <div class="todo-group">
-                        <div class="todo-title">本周</div>
-                        ${week.slice(0, 4).map(renderTodoItem).join('') || '<div class="todo-empty">暂无</div>'}
+                        <div class="todo-title">${this.escapeHtml(t('todoWeek', '本周'))}</div>
+                        ${week.slice(0, 4).map(renderTodoItem).join('') || `<div class="todo-empty">${this.escapeHtml(t('todoNone', '暂无'))}</div>`}
                       </div>
                     </div>
                     <div class="todo-actions">
-                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="today" title="添加今天待办">+今天</button>
-                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="week" title="添加本周待办">+本周</button>
+                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="today" title="${this.escapeHtml(t('todoAddTodayTitle', '添加今天待办'))}">${this.escapeHtml(t('todoAddTodayButton', '+今天'))}</button>
+                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="week" title="${this.escapeHtml(t('todoAddWeekTitle', '添加本周待办'))}">${this.escapeHtml(t('todoAddWeekButton', '+本周'))}</button>
                     </div>
                 `
             };
@@ -668,7 +670,7 @@ const Shortcuts = {
 
             const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
             const firstDay = new Date(year, monthIndex, 1).getDay();
-            const weekHeaders = ['日', '一', '二', '三', '四', '五', '六'];
+            const weekHeaders = window.I18N ? I18N.weekHeaders() : ['日', '一', '二', '三', '四', '五', '六'];
 
             const cells = [];
             for (let i = 0; i < firstDay; i++) cells.push('');
@@ -690,7 +692,7 @@ const Shortcuts = {
                 title,
                 badgeHtml: '📅',
                 bodyHtml: `
-                  <div class="cal-meta">${year}年${month}月</div>
+                  <div class="cal-meta">${this.escapeHtml(now.toLocaleDateString(window.I18N ? I18N.locale() : 'zh-CN', { year: 'numeric', month: 'long' }))}</div>
                   ${gridHtml}
                 `
             };
@@ -701,7 +703,8 @@ const Shortcuts = {
             const last = widget?.data?.last;
             const lastFetched = widget?.data?.lastFetched;
             const ageMin = Number.isFinite(lastFetched) ? Math.floor((Date.now() - lastFetched) / 60000) : null;
-            const ageStr = ageMin === null ? '' : `${ageMin} 分钟前`;
+            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+            const ageStr = ageMin === null ? '' : (window.I18N ? I18N.format('minutesAgo', { minutes: ageMin }) : `${ageMin} 分钟前`);
 
             if (last && typeof last.temp === 'number') {
                 return {
@@ -709,8 +712,8 @@ const Shortcuts = {
                     badgeHtml: '🌦️',
                     bodyHtml: `
                       <div class="wx-row">
-                        <div class="wx-city">${this.escapeHtml(city || '天气')}</div>
-                        <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="刷新">刷新</button>
+                        <div class="wx-city">${this.escapeHtml(city || t('weatherLabel', '天气'))}</div>
+                        <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="${this.escapeHtml(t('weatherRefresh', '刷新'))}">${this.escapeHtml(t('weatherRefresh', '刷新'))}</button>
                       </div>
                       <div class="wx-temp">${last.temp}<span class="wx-unit">°C</span></div>
                       <div class="wx-meta">${this.escapeHtml(ageStr)}</div>
@@ -723,20 +726,21 @@ const Shortcuts = {
                 badgeHtml: '🌦️',
                 bodyHtml: `
                   <div class="wx-row">
-                    <div class="wx-city">${this.escapeHtml(city || '未设置城市')}</div>
-                    <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="刷新">获取</button>
+                    <div class="wx-city">${this.escapeHtml(city || t('weatherNotSetCity', '未设置城市'))}</div>
+                    <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="${this.escapeHtml(t('weatherRefresh', '刷新'))}">${this.escapeHtml(t('weatherGet', '获取'))}</button>
                   </div>
-                  <div class="wx-meta">请输入城市后点击保存，再点获取</div>
+                  <div class="wx-meta">${this.escapeHtml(t('weatherHint', '请输入城市后点击保存，再点获取'))}</div>
                 `
             };
         }
 
         const pinned = widget?.data?.pinned === true;
         const content = typeof widget?.data?.content === 'string' ? widget.data.content : '';
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
         return {
             title,
             badgeHtml: pinned ? '📌' : '📝',
-            bodyHtml: `<div class="note-content">${content.trim() ? this.renderSimpleMarkdown(content.trim()) : `<span class="note-placeholder">${this.escapeHtml('点击编辑内容...')}</span>`}</div>`
+            bodyHtml: `<div class="note-content">${content.trim() ? this.renderSimpleMarkdown(content.trim()) : `<span class="note-placeholder">${this.escapeHtml(t('noteClickToEditContent', '点击编辑内容...'))}</span>`}</div>`
         };
     },
 
@@ -748,7 +752,8 @@ const Shortcuts = {
             const items = Array.isArray(widget?.data?.items) ? widget.data.items : [];
             const today = items.filter(i => i.scope !== 'week');
             const week = items.filter(i => i.scope === 'week');
-            const countLine = `今天 ${today.filter(i => i.done).length}/${today.length} · 本周 ${week.filter(i => i.done).length}/${week.length}`;
+            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+            const countLine = `${t('todoToday', '今天')} ${today.filter(i => i.done).length}/${today.length} · ${t('todoWeek', '本周')} ${week.filter(i => i.done).length}/${week.length}`;
 
             const renderTodoItem = (item) => {
                 const checked = item.done ? 'checked' : '';
@@ -759,12 +764,12 @@ const Shortcuts = {
             const weekHtml = week.slice(0, 2).map(renderTodoItem).join('');
             const listHtml = `
                 <div class="todo-group">
-                  <div class="todo-title">今天</div>
-                  ${todayHtml || '<div class="todo-empty">暂无</div>'}
+                  <div class="todo-title">${this.escapeHtml(t('todoToday', '今天'))}</div>
+                  ${todayHtml || `<div class="todo-empty">${this.escapeHtml(t('todoNone', '暂无'))}</div>`}
                 </div>
                 <div class="todo-group">
-                  <div class="todo-title">本周</div>
-                  ${weekHtml || '<div class="todo-empty">暂无</div>'}
+                  <div class="todo-title">${this.escapeHtml(t('todoWeek', '本周'))}</div>
+                  ${weekHtml || `<div class="todo-empty">${this.escapeHtml(t('todoNone', '暂无'))}</div>`}
                 </div>
             `;
             return {
@@ -774,8 +779,8 @@ const Shortcuts = {
                     <div class="todo-count">${this.escapeHtml(countLine)}</div>
                     <div class="todo-list">${listHtml}</div>
                     <div class="todo-actions">
-                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="today" title="添加今天待办">+今天</button>
-                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="week" title="添加本周待办">+本周</button>
+                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="today" title="${this.escapeHtml(t('todoAddTodayTitle', '添加今天待办'))}">${this.escapeHtml(t('todoAddTodayButton', '+今天'))}</button>
+                      <button class="widget-action widget-todo-add" data-id="${this.escapeHtml(widget.id)}" data-scope="week" title="${this.escapeHtml(t('todoAddWeekTitle', '添加本周待办'))}">${this.escapeHtml(t('todoAddWeekButton', '+本周'))}</button>
                     </div>
                 `
             };
@@ -788,7 +793,7 @@ const Shortcuts = {
             return {
                 icon: '📅',
                 title,
-                metaHtml: `<span>${this.escapeHtml(ym)} · ${this.escapeHtml(d)}</span>`
+                metaHtml: `<span>${this.escapeHtml(now.toLocaleDateString(window.I18N ? I18N.locale() : 'zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }))}</span>`
             };
         }
 
@@ -797,20 +802,21 @@ const Shortcuts = {
             const last = widget?.data?.last;
             const lastFetched = widget?.data?.lastFetched;
             const ageMin = Number.isFinite(lastFetched) ? Math.floor((Date.now() - lastFetched) / 60000) : null;
+            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
 
             if (last && typeof last.temp === 'number') {
                 const ageStr = ageMin === null ? '' : ` · ${ageMin}m`;
                 return {
                     icon: '🌦️',
                     title,
-                    metaHtml: `<span>${this.escapeHtml(city || '天气')}: ${last.temp}°C${this.escapeHtml(ageStr)}</span> <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="刷新">↻</button>`
+                    metaHtml: `<span>${this.escapeHtml(city || t('weatherLabel', '天气'))}: ${last.temp}°C${this.escapeHtml(ageStr)}</span> <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="${this.escapeHtml(t('weatherRefresh', '刷新'))}">↻</button>`
                 };
             }
 
             return {
                 icon: '🌦️',
                 title,
-                metaHtml: `<span>${this.escapeHtml(city || '设置城市')} · 未获取</span> <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="刷新">↻</button>`
+                metaHtml: `<span>${this.escapeHtml(city || t('weatherSetCity', '设置城市'))} · ${this.escapeHtml(t('weatherNotFetched', '未获取'))}</span> <button class="widget-action widget-weather-refresh" data-id="${this.escapeHtml(widget.id)}" title="${this.escapeHtml(t('weatherRefresh', '刷新'))}">↻</button>`
             };
         }
 
@@ -818,18 +824,20 @@ const Shortcuts = {
         const pinned = widget?.data?.pinned === true;
         const content = typeof widget?.data?.content === 'string' ? widget.data.content : '';
         const preview = content.trim().slice(0, 120);
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
         return {
             icon: pinned ? '📌' : '📝',
             title,
-            metaHtml: preview ? this.renderSimpleMarkdown(preview) : `<span>${this.escapeHtml('点击编辑')}</span>`
+            metaHtml: preview ? this.renderSimpleMarkdown(preview) : `<span>${this.escapeHtml(t('noteClickToEdit', '点击编辑'))}</span>`
         };
     },
 
     getDefaultWidgetTitle(type) {
-        if (type === 'todo') return '待办';
-        if (type === 'calendar') return '日历';
-        if (type === 'weather') return '天气';
-        return '便签';
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+        if (type === 'todo') return t('widgetDefaultTodo', '待办');
+        if (type === 'calendar') return t('widgetDefaultCalendar', '日历');
+        if (type === 'weather') return t('widgetDefaultWeather', '天气');
+        return t('widgetDefaultNote', '便签');
     },
 
     getNextOrderForCategory(categoryId) {
@@ -942,13 +950,13 @@ const Shortcuts = {
 
         addTabShortcut?.addEventListener('click', () => {
             this.setAddItemTab('shortcut');
-            if (modalTitle) modalTitle.textContent = '➕ 添加快捷方式';
+            if (modalTitle) modalTitle.textContent = window.I18N ? I18N.t('addShortcutTitle') : '添加快捷方式';
             document.getElementById('shortcutName')?.focus();
         });
 
         addTabWidget?.addEventListener('click', () => {
             this.setAddItemTab('widget');
-            if (modalTitle) modalTitle.textContent = '➕ 添加小组件';
+            if (modalTitle) modalTitle.textContent = window.I18N ? I18N.t('addWidgetTitle') : '添加小组件';
             widgetTitle?.focus();
         });
 
@@ -981,10 +989,10 @@ const Shortcuts = {
                     const url = document.getElementById('shortcutUrl').value.trim();
                     if (url) this.updateIconCandidates(url);
                 } else if (type === 'custom') {
-                    iconInput.placeholder = '输入图片 URL...';
+                    iconInput.placeholder = window.I18N ? I18N.t('iconPlaceholderUrl') : '输入图片 URL...';
                     document.getElementById('iconCandidates').style.display = 'none';
                 } else if (type === 'emoji') {
-                    iconInput.placeholder = '输入或选择表情符号...';
+                    iconInput.placeholder = window.I18N ? I18N.t('iconPlaceholderEmoji') : '输入或选择表情符号...';
                     this.renderEmojiGrid('common');
                     document.getElementById('iconCandidates').style.display = 'none';
                 } else {
@@ -1069,7 +1077,8 @@ const Shortcuts = {
                 if (!Array.isArray(widget.data.items)) widget.data.items = [];
 
                 const scope = todoAdd.dataset.scope === 'week' ? 'week' : 'today';
-                const text = prompt(scope === 'week' ? '添加本周待办：' : '添加今天待办：');
+                const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+                const text = prompt(scope === 'week' ? t('promptAddTodoWeek', '添加本周待办：') : t('promptAddTodoToday', '添加今天待办：'));
                 if (!text || !text.trim()) return;
 
                 widget.data.items.push({
@@ -1244,7 +1253,7 @@ const Shortcuts = {
                     icon = iconId;
                 } catch (e) {
                     console.error('[Shortcuts] Failed to save local icon:', e);
-                    alert('保存图片失败，请重试');
+                    alert(window.I18N ? I18N.t('saveImageFailed') : '保存图片失败，请重试');
                     return;
                 }
             } else if (type === 'upload') {
@@ -1311,7 +1320,8 @@ const Shortcuts = {
      */
     async delete(id) {
         const shortcut = this.shortcuts.find(s => s.id === id);
-        if (confirm(`确定要删除 "${shortcut?.name}" 吗？`)) {
+        const msg = window.I18N ? I18N.format('confirmDeleteShortcut', { name: shortcut?.name || '' }) : `确定要删除 "${shortcut?.name}" 吗？`;
+        if (confirm(msg)) {
             this.shortcuts = this.shortcuts.filter(s => s.id !== id);
             await Storage.saveShortcuts(this.shortcuts);
             this.render();
@@ -1320,7 +1330,9 @@ const Shortcuts = {
 
     async deleteWidget(id) {
         const widget = this.widgets.find(w => w.id === id);
-        if (confirm(`确定要删除 "${widget?.title || '小组件'}" 吗？`)) {
+        const widgetName = widget?.title || (window.I18N ? I18N.t('widgetDefaultNote') : '小组件');
+        const msg = window.I18N ? I18N.format('confirmDeleteWidget', { name: widgetName }) : `确定要删除 "${widget?.title || '小组件'}" 吗？`;
+        if (confirm(msg)) {
             this.widgets = this.widgets.filter(w => w.id !== id);
             await Storage.saveWidgets(this.widgets);
             this.render();
@@ -1364,7 +1376,7 @@ const Shortcuts = {
             } else if (type === 'weather') {
                 const city = (cityEl?.value || '').trim();
                 if (!city) {
-                    alert('请先填写城市');
+                    alert(window.I18N ? I18N.t('fillCityFirst') : '请先填写城市');
                     cityEl?.focus();
                     return;
                 }
@@ -1524,7 +1536,7 @@ const Shortcuts = {
             if (id) {
                 const widget = this.widgets.find(w => w.id === id);
                 if (widget) {
-                    title.textContent = '?? 编辑小组件';
+                    title.textContent = window.I18N ? I18N.t('editWidgetTitle') : '编辑小组件';
                     if (widgetIdInput) widgetIdInput.value = widget.id;
                     if (widgetType) widgetType.value = widget.type || 'note';
                     if (widgetSize) widgetSize.value = (widget.size === '4' || widget.size === 4) ? '4' : '8';
@@ -1539,7 +1551,7 @@ const Shortcuts = {
                     }
                 }
             } else {
-                title.textContent = '? 添加小组件';
+                title.textContent = window.I18N ? I18N.t('addWidgetTitle') : '添加小组件';
                 if (widgetTitle && widgetType) widgetTitle.value = this.getDefaultWidgetTitle(widgetType.value || 'note');
             }
 
@@ -1551,7 +1563,7 @@ const Shortcuts = {
         if (id) {
             const shortcut = this.shortcuts.find(s => s.id === id);
             if (shortcut) {
-                title.textContent = '✏️ 编辑快捷方式';
+                title.textContent = window.I18N ? I18N.t('editShortcutTitle') : '编辑快捷方式';
                 nameInput.value = shortcut.name;
                 urlInput.value = shortcut.url;
                 idInput.value = shortcut.id;
@@ -1585,7 +1597,7 @@ const Shortcuts = {
                 }
             }
         } else {
-            title.textContent = '➕ 添加快捷方式';
+            title.textContent = window.I18N ? I18N.t('addShortcutTitle') : '添加快捷方式';
             idInput.value = '';
             nameInput.value = '';
             urlInput.value = '';
@@ -1661,7 +1673,7 @@ const Shortcuts = {
         }
 
         container.style.display = 'grid';
-        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 10px; font-size: 12px; color: var(--text-muted);">正在获取图标...</div>';
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 10px; font-size: 12px; color: var(--text-muted);">${this.escapeHtml(window.I18N ? I18N.t('iconsFetching') : '正在获取图标...')}</div>`;
 
         const seenIcons = new Set();
         const candidates = [];
@@ -1745,7 +1757,7 @@ const Shortcuts = {
         // 添加搜索按钮
         const searchBtn = document.createElement('div');
         searchBtn.className = 'icon-candidate search-icon-btn';
-        searchBtn.title = '在网页中搜索图标';
+        searchBtn.title = window.I18N ? I18N.t('iconSearchInPage') : '在网页中搜索图标';
         searchBtn.innerHTML = `
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"></circle>

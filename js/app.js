@@ -61,15 +61,16 @@ const App = {
         if (timeEl) timeEl.textContent = timeStr;
 
         // 问候语
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
         let greeting;
         if (hours >= 5 && hours < 12) {
-            greeting = '早上好 ☀️';
+            greeting = `${t('greetingMorning', '早上好')} ☀️`;
         } else if (hours >= 12 && hours < 18) {
-            greeting = '下午好 🌤️';
+            greeting = `${t('greetingAfternoon', '下午好')} 🌤️`;
         } else if (hours >= 18 && hours < 22) {
-            greeting = '晚上好 🌙';
+            greeting = `${t('greetingEvening', '晚上好')} 🌙`;
         } else {
-            greeting = '夜深了 🌟';
+            greeting = `${t('greetingNight', '夜深了')} 🌟`;
         }
 
         if (greetingEl) greetingEl.textContent = greeting;
@@ -81,7 +82,8 @@ const App = {
             month: 'long',
             day: 'numeric'
         };
-        if (dateEl) dateEl.textContent = now.toLocaleDateString('zh-CN', options);
+        const locale = window.I18N ? I18N.locale() : 'zh-CN';
+        if (dateEl) dateEl.textContent = now.toLocaleDateString(locale, options);
     },
 
     /**
@@ -134,7 +136,8 @@ const App = {
         toggleSidebar?.addEventListener('click', async () => {
             const sidebar = document.getElementById('sidebar');
             const isCollapsed = sidebar.classList.toggle('collapsed');
-            toggleSidebar.title = isCollapsed ? '展开侧边栏' : '收起侧边栏';
+            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+            toggleSidebar.title = isCollapsed ? t('toggleSidebarExpand', '展开侧边栏') : t('toggleSidebarCollapse', '收起侧边栏');
             Settings.settings.showSidebar = !isCollapsed;
             await Storage.saveSettings(Settings.settings);
             document.getElementById('showSidebar').checked = !isCollapsed;
