@@ -594,10 +594,26 @@ const Shortcuts = {
                 // 本地图标必须从缓存加载，使用占位符
                 return `<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-src="${shortcut.icon}" data-cached="false" data-need-fetch="true" alt="${this.escapeHtml(shortcut.name)}">`;
             }
+        } else if (shortcut.icon.startsWith('builtin:')) {
+            const url = this.getBuiltinIconUrl(shortcut.icon);
+            return `<img src="${this.escapeHtml(url)}" data-src="${this.escapeHtml(shortcut.icon)}" data-cached="true" alt="${this.escapeHtml(shortcut.name)}">`;
         } else {
             // Emoji
             return `<span class="emoji">${shortcut.icon}</span>`;
         }
+    },
+
+    getBuiltinIconUrl(icon) {
+        const id = String(icon || '').replace(/^builtin:/, '').trim();
+        const rel = `images/builtin/${encodeURIComponent(id)}.svg`;
+        try {
+            if (typeof chrome !== 'undefined' && chrome?.runtime?.getURL) {
+                return chrome.runtime.getURL(rel);
+            }
+        } catch (e) {
+            // ignore
+        }
+        return rel;
     },
 
     getWidgetCardHtml(widget) {
@@ -1241,7 +1257,7 @@ const Shortcuts = {
                 url = 'https://' + url;
             }
 
-            let iconCached = type === 'upload';
+            let iconCached = type === 'upload' || (type === 'auto' && icon && icon !== 'auto');
 
             if (type === 'upload' && uploadInput?.files[0]) {
                 const file = uploadInput.files[0];
@@ -1531,6 +1547,13 @@ const Shortcuts = {
         document.querySelector('.icon-option[data-type="auto"]').classList.add('active');
         iconInput.style.display = 'none';
         emojiPicker.style.display = 'none';
+
+        // Clear icon candidates from previous dialog
+        const iconCandidates = document.getElementById('iconCandidates');
+        if (iconCandidates) {
+            iconCandidates.innerHTML = '';
+            iconCandidates.style.display = 'none';
+        }
 
         if (kind === 'widget') {
             if (id) {

@@ -105,6 +105,56 @@
             color: rgba(255, 255, 255, 0.6);
             text-align: center;
         }
+
+        .add-website-section {
+            margin-top: 16px;
+        }
+
+        .category-selector {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .btn-add-website {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .btn-add-website:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .success-message {
+            display: none;
+            padding: 8px;
+            margin-bottom: 12px;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -128,6 +178,16 @@
                 <span class="stat-label">当前壁纸</span>
                 <span class="stat-value" id="currentWallpaper">默认</span>
             </div>
+        </div>
+
+        <div class="add-website-section">
+            <div class="success-message" id="successMessage">✓ 已添加到书签</div>
+            <select class="category-selector" id="categorySelector">
+                <option value="">选择分类...</option>
+            </select>
+            <button class="btn-add-website" id="addWebsiteBtn">
+                📌 添加当前网站
+            </button>
         </div>
 
         <div class="popup-footer">

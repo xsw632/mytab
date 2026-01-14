@@ -14,9 +14,8 @@ const ImageDB = {
         try {
             const { hostname, protocol } = new URL(url);
             if (protocol !== 'https:' && protocol !== 'http:') return false;
-            return hostname === 'www.google.com' ||
-                hostname === 'icons.duckduckgo.com' ||
-                hostname === 'images.unsplash.com';
+            // Allow any HTTPS URL to be cached
+            return true;
         } catch (e) {
             return false;
         }

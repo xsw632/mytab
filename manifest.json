@@ -22,14 +22,11 @@
     "default_title": "__MSG_actionTitle__"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
-    "https://www.google.com/*",
-    "https://icons.duckduckgo.com/*",
-    "https://images.unsplash.com/*",
-    "https://api.open-meteo.com/*",
-    "https://geocoding-api.open-meteo.com/*"
+    "<all_urls>"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' blob: data: https:;"

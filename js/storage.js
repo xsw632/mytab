@@ -21,12 +21,12 @@ const Storage = {
       { id: 'home', name: '首页', icon: '🏠', isDefault: true }
     ],
     shortcuts: [
-      { id: '1', name: 'Google', url: 'https://www.google.com', icon: 'auto', categoryId: 'home' },
-      { id: '2', name: 'GitHub', url: 'https://github.com', icon: 'auto', categoryId: 'home' },
-      { id: '3', name: 'YouTube', url: 'https://www.youtube.com', icon: 'auto', categoryId: 'home' },
-      { id: '4', name: 'Twitter', url: 'https://twitter.com', icon: 'auto', categoryId: 'home' },
-      { id: '5', name: '知乎', url: 'https://www.zhihu.com', icon: 'auto', categoryId: 'home' },
-      { id: '6', name: '哔哩哔哩', url: 'https://www.bilibili.com', icon: 'auto', categoryId: 'home' }
+      { id: '1', name: 'Google', url: 'https://www.google.com', icon: 'builtin:google', categoryId: 'home' },
+      { id: '2', name: 'GitHub', url: 'https://github.com', icon: 'builtin:github', categoryId: 'home' },
+      { id: '3', name: 'YouTube', url: 'https://www.youtube.com', icon: 'builtin:youtube', categoryId: 'home' },
+      { id: '4', name: 'Twitter', url: 'https://twitter.com', icon: 'builtin:x', categoryId: 'home' },
+      { id: '5', name: '知乎', url: 'https://www.zhihu.com', icon: 'builtin:zhihu', categoryId: 'home' },
+      { id: '6', name: '哔哩哔哩', url: 'https://www.bilibili.com', icon: 'builtin:bilibili', categoryId: 'home' }
     ],
     widgets: [],
     currentCategory: 'home'
