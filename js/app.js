@@ -122,14 +122,14 @@ const App = {
         });
 
         // 搜索引擎选项
-        document.querySelectorAll('.search-engine-option').forEach(option => {
-            option.addEventListener('click', async (e) => {
-                const engine = option.dataset.engine;
-                Settings.settings.searchEngine = engine;
-                await Storage.saveSettings(Settings.settings);
-                Settings.updateSearchEngineIcon();
-                searchEngineDropdown.classList.remove('show');
-            });
+        searchEngineDropdown?.addEventListener('click', async (e) => {
+            const option = e.target.closest('.search-engine-option');
+            if (!option) return;
+            const engine = option.dataset.engine;
+            Settings.settings.searchEngine = engine;
+            await Storage.saveSettings(Settings.settings);
+            Settings.updateSearchEngineIcon();
+            searchEngineDropdown.classList.remove('show');
         });
 
         // 切换侧边栏

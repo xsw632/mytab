@@ -288,149 +288,7 @@ const Shortcuts = {
             el.dataset.renderingFinished = 'true';
         });
 
-        // Re-bind events for items
-        const itemCards = container.querySelectorAll('.shortcut-card:not(.btn-add-shortcut)');
-        itemCards.forEach(card => {
-            // Drag and Drop
-            card.addEventListener('dragstart', (e) => {
-                const kind = card.getAttribute('data-kind') || 'shortcut';
-                const id = card.getAttribute('data-id');
-
-                this.draggingItem = { kind, id };
-
-                if (kind === 'shortcut') {
-                    e.dataTransfer.setData('shortcutId', id);
-                }
-                e.dataTransfer.setData('mytabItem', JSON.stringify({ kind, id }));
-
-                card.classList.add('dragging');
-                setTimeout(() => card.style.opacity = '0.5', 0);
-            });
-
-            card.addEventListener('dragend', () => {
-                card.classList.remove('dragging');
-                card.style.opacity = '1';
-                this.draggingItem = null;
-
-                document.querySelectorAll('.category-item').forEach(item => {
-                    item.classList.remove('drag-over');
-                });
-                container.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-            });
-
-            card.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                card.classList.add('drag-over');
-            });
-
-            card.addEventListener('dragleave', () => {
-                card.classList.remove('drag-over');
-            });
-
-            card.addEventListener('drop', async (e) => {
-                e.preventDefault();
-                card.classList.remove('drag-over');
-
-                const raw = e.dataTransfer.getData('mytabItem');
-                if (!raw) return;
-                let dragged;
-                try { dragged = JSON.parse(raw); } catch (err) { return; }
-                if (!dragged?.id) return;
-
-                const targetKind = card.getAttribute('data-kind') || 'shortcut';
-                const targetId = card.getAttribute('data-id');
-                if (!targetId) return;
-
-                const rect = card.getBoundingClientRect();
-                const midX = rect.left + rect.width / 2;
-                const midY = rect.top + rect.height / 2;
-                const dx = e.clientX - midX;
-                const dy = e.clientY - midY;
-                const useX = Math.abs(dx) > Math.abs(dy);
-                const isAfter = useX ? (e.clientX > midX) : (e.clientY > midY);
-
-                await this.reorderInCurrentCategory(dragged.kind, dragged.id, targetKind, targetId, isAfter);
-            });
-        });
-
-        // container-level drag handlers are bound once in bindEvents()
-
-        // Add Button
-        const addBtn = document.getElementById('addShortcutBtn');
-        addBtn?.addEventListener('click', () => {
-            this.showModal();
-        });
-
-        // Error event listeners for images
-        const shortcutImages = container.querySelectorAll('.shortcut-icon img');
-        shortcutImages.forEach(img => {
-            img.addEventListener('error', (e) => {
-                const target = e.target;
-                const src = target.src;
-
-                // If it's a blob URL, it means the local storage failed to load a valid image
-                if (src.startsWith('blob:')) {
-                    this.showTextFallback(target);
-                    return;
-                }
-
-                // If offline and NOT a blob URL, wait a tiny bit to see if async cache logic fixes it
-                try {
-                    const iconUrl = new URL(src);
-                    let hostname = '';
-
-                    const getBaseDomain = (host) => {
-                        const parts = host.split('.');
-                        if (parts.length > 2) return parts.slice(-2).join('.');
-                        return host;
-                    };
-
-                    if (src.includes('google.com') && src.includes('sz=128')) {
-                        hostname = iconUrl.searchParams.get('domain');
-                        const baseDomain = getBaseDomain(hostname);
-                        if (hostname && baseDomain !== hostname) {
-                            const newUrl = `https://www.google.com/s2/favicons?domain=${baseDomain}&sz=128`;
-                            target.src = newUrl;
-                            return;
-                        }
-                        const fallbackUrl = `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
-                        // Cache the fallback execution
-                        if (window.ImageDB && target.dataset.src) {
-                            fetch(fallbackUrl).then(r => r.blob()).then(blob => {
-                                if (ImageDB.isCacheableUrl(target.dataset.src)) {
-                                    ImageDB.saveImage(target.dataset.src, blob);
-                                }
-                            }).catch(e => console.warn('Failed to cache fallback:', e));
-                        }
-                        target.src = fallbackUrl;
-                        return;
-                    }
-
-                    if (src.includes('duckduckgo.com')) {
-                        const pathParts = iconUrl.pathname.split('/');
-                        hostname = pathParts[pathParts.length - 1].replace('.ico', '');
-                        const baseDomain = getBaseDomain(hostname);
-                        if (hostname && baseDomain !== hostname) {
-                            const newUrl = `https://icons.duckduckgo.com/ip3/${baseDomain}.ico`;
-                            target.src = newUrl;
-                            // Cache this fallback too if it works? simpler to just let the next error catch it or let it fail 
-                            // improving logic: if we are switching to base domain due to failure, it means the specific subdomain failed.
-                            // We should probably cache this one too if we are here.
-                            if (window.ImageDB && target.dataset.src) {
-                                fetch(newUrl).then(r => r.blob()).then(blob => {
-                                    if (ImageDB.isCacheableUrl(target.dataset.src)) {
-                                        ImageDB.saveImage(target.dataset.src, blob);
-                                    }
-                                }).catch(e => console.warn('Failed to cache fallback:', e));
-                            }
-                            return;
-                        }
-                    }
-                } catch (err) { }
-
-                this.showTextFallback(target);
-            });
-        });
+        // Item/grid interactions are bound once in bindEvents()
 
         // 4. 异步加载未缓存的图标（只在联网时）
         if (window.ImageDB && navigator.onLine) {
@@ -1182,25 +1040,171 @@ const Shortcuts = {
             });
         }
 
-        // Grid drop to end (bind once)
+        // Grid drag & drop + image error handling (bind once)
         if (container && !this.gridDnDBound) {
             this.gridDnDBound = true;
+            let dragOverCard = null;
+
+            // Capture image load errors from dynamic DOM (error doesn't bubble)
+            container.addEventListener('error', (e) => {
+                const target = e.target;
+                if (!target || target.tagName !== 'IMG') return;
+                if (!target.closest('.shortcut-icon')) return;
+
+                const src = target.src;
+
+                // If it's a blob URL, it means the local storage failed to load a valid image
+                if (src.startsWith('blob:')) {
+                    this.showTextFallback(target);
+                    return;
+                }
+
+                try {
+                    const iconUrl = new URL(src);
+                    let hostname = '';
+
+                    const getBaseDomain = (host) => {
+                        const parts = host.split('.');
+                        if (parts.length > 2) return parts.slice(-2).join('.');
+                        return host;
+                    };
+
+                    if (src.includes('google.com') && src.includes('sz=128')) {
+                        hostname = iconUrl.searchParams.get('domain');
+                        const baseDomain = getBaseDomain(hostname);
+                        if (hostname && baseDomain !== hostname) {
+                            const newUrl = `https://www.google.com/s2/favicons?domain=${baseDomain}&sz=128`;
+                            target.src = newUrl;
+                            return;
+                        }
+                        const fallbackUrl = `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
+                        // Cache the fallback execution
+                        if (window.ImageDB && target.dataset.src) {
+                            fetch(fallbackUrl).then(r => r.blob()).then(blob => {
+                                if (ImageDB.isCacheableUrl(target.dataset.src)) {
+                                    ImageDB.saveImage(target.dataset.src, blob);
+                                }
+                            }).catch(err => console.warn('Failed to cache fallback:', err));
+                        }
+                        target.src = fallbackUrl;
+                        return;
+                    }
+
+                    if (src.includes('duckduckgo.com')) {
+                        const pathParts = iconUrl.pathname.split('/');
+                        hostname = pathParts[pathParts.length - 1].replace('.ico', '');
+                        const baseDomain = getBaseDomain(hostname);
+                        if (hostname && baseDomain !== hostname) {
+                            const newUrl = `https://icons.duckduckgo.com/ip3/${baseDomain}.ico`;
+                            target.src = newUrl;
+                            if (window.ImageDB && target.dataset.src) {
+                                fetch(newUrl).then(r => r.blob()).then(blob => {
+                                    if (ImageDB.isCacheableUrl(target.dataset.src)) {
+                                        ImageDB.saveImage(target.dataset.src, blob);
+                                    }
+                                }).catch(err => console.warn('Failed to cache fallback:', err));
+                            }
+                            return;
+                        }
+                    }
+                } catch (err) { }
+
+                this.showTextFallback(target);
+            }, true);
+
+            container.addEventListener('dragstart', (e) => {
+                const card = e.target.closest('.shortcut-card:not(.btn-add-shortcut)');
+                if (!card) return;
+
+                const kind = card.getAttribute('data-kind') || 'shortcut';
+                const id = card.getAttribute('data-id');
+                this.draggingItem = { kind, id };
+
+                if (kind === 'shortcut') {
+                    e.dataTransfer.setData('shortcutId', id);
+                }
+                e.dataTransfer.setData('mytabItem', JSON.stringify({ kind, id }));
+
+                card.classList.add('dragging');
+                setTimeout(() => card.style.opacity = '0.5', 0);
+            });
+
+            container.addEventListener('dragend', () => {
+                const card = container.querySelector('.shortcut-card.dragging');
+                if (card) {
+                    card.classList.remove('dragging');
+                    card.style.opacity = '1';
+                }
+                this.draggingItem = null;
+
+                document.querySelectorAll('.category-item').forEach(item => {
+                    item.classList.remove('drag-over');
+                });
+                container.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                dragOverCard = null;
+            });
 
             container.addEventListener('dragover', (e) => {
-                if (this.draggingItem) {
-                    e.preventDefault();
+                if (!this.draggingItem) return;
+                e.preventDefault();
+
+                const card = e.target.closest('.shortcut-card:not(.btn-add-shortcut)');
+                if (!card) {
+                    if (dragOverCard) {
+                        dragOverCard.classList.remove('drag-over');
+                        dragOverCard = null;
+                    }
+                    return;
+                }
+
+                if (dragOverCard && dragOverCard !== card) {
+                    dragOverCard.classList.remove('drag-over');
+                }
+                card.classList.add('drag-over');
+                dragOverCard = card;
+            });
+
+            container.addEventListener('dragleave', (e) => {
+                if (!this.draggingItem) return;
+                const related = e.relatedTarget;
+                if (related && container.contains(related)) return;
+                if (dragOverCard) {
+                    dragOverCard.classList.remove('drag-over');
+                    dragOverCard = null;
                 }
             });
 
             container.addEventListener('drop', async (e) => {
                 const raw = e.dataTransfer?.getData('mytabItem');
                 if (!raw) return;
-                if (e.target.closest('.shortcut-card:not(.btn-add-shortcut)')) return;
+                e.preventDefault();
 
                 let dragged;
                 try { dragged = JSON.parse(raw); } catch (err) { return; }
                 if (!dragged?.id) return;
-                await this.reorderInCurrentCategory(dragged.kind, dragged.id, null, null);
+
+                const card = e.target.closest('.shortcut-card:not(.btn-add-shortcut)');
+                if (!card) {
+                    await this.reorderInCurrentCategory(dragged.kind, dragged.id, null, null);
+                    return;
+                }
+
+                card.classList.remove('drag-over');
+                if (dragOverCard === card) dragOverCard = null;
+
+                const targetKind = card.getAttribute('data-kind') || 'shortcut';
+                const targetId = card.getAttribute('data-id');
+                if (!targetId) return;
+
+                const rect = card.getBoundingClientRect();
+                const midX = rect.left + rect.width / 2;
+                const midY = rect.top + rect.height / 2;
+                const dx = e.clientX - midX;
+                const dy = e.clientY - midY;
+                const useX = Math.abs(dx) > Math.abs(dy);
+                const isAfter = useX ? (e.clientX > midX) : (e.clientY > midY);
+
+                await this.reorderInCurrentCategory(dragged.kind, dragged.id, targetKind, targetId, isAfter);
             });
         }
     },

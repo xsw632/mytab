@@ -80,11 +80,12 @@ const Settings = {
         if (window.I18N) {
             I18N.apply(this.settings.language);
         }
+        const rerenderViews = () => {
+            if (window.Categories?.render) Categories.render();
+            if (window.Shortcuts?.render) Shortcuts.render();
+        };
         if (window.Categories?.applyLanguage) {
-            Categories.applyLanguage().then(() => {
-                if (window.Categories?.render) Categories.render();
-                if (window.Shortcuts?.render) Shortcuts.render();
-            });
+            Categories.applyLanguage().then(rerenderViews);
         }
         // 应用壁纸
         this.applyWallpaper();
@@ -96,6 +97,9 @@ const Settings = {
         const sidebar = document.getElementById('sidebar');
         const clockSection = document.querySelector('.clock-section');
         const searchSection = document.querySelector('.search-section');
+        const setSectionVisible = (el, isVisible) => {
+            if (el) el.style.display = isVisible ? '' : 'none';
+        };
 
         if (sidebar) {
             sidebar.classList.toggle('collapsed', !this.settings.showSidebar);
@@ -106,12 +110,8 @@ const Settings = {
             const isCollapsed = sidebar?.classList.contains('collapsed');
             toggleSidebarBtn.title = isCollapsed ? t('toggleSidebarExpand', '展开侧边栏') : t('toggleSidebarCollapse', '收起侧边栏');
         }
-        if (clockSection) {
-            clockSection.style.display = this.settings.showClock ? '' : 'none';
-        }
-        if (searchSection) {
-            searchSection.style.display = this.settings.showSearch ? '' : 'none';
-        }
+        setSectionVisible(clockSection, this.settings.showClock);
+        setSectionVisible(searchSection, this.settings.showSearch);
 
         // 更新设置表单
         this.updateSettingsForm();
@@ -274,6 +274,10 @@ const Settings = {
         const wallpaperGrid = document.getElementById('wallpaperGrid');
         const customWallpaperUrl = document.getElementById('customWallpaperUrl');
         const applyCustomWallpaper = document.getElementById('applyCustomWallpaper');
+        const saveSettings = () => Storage.saveSettings(this.settings);
+        const setSectionVisible = (el, isVisible) => {
+            if (el) el.style.display = isVisible ? '' : 'none';
+        };
 
         // 打开设置
         if (settingsBtn) {
@@ -310,7 +314,7 @@ const Settings = {
                     this.settings.wallpaper = id;
                     this.settings.customWallpaper = '';
 
-                    await Storage.saveSettings(this.settings);
+                    await saveSettings();
                     console.log('Settings saved:', this.settings);
 
                     this.renderWallpaperGrid();
@@ -326,7 +330,7 @@ const Settings = {
                 if (url) {
                     console.log('Applying custom wallpaper:', url);
                     this.settings.customWallpaper = url;
-                    await Storage.saveSettings(this.settings);
+                    await saveSettings();
                     this.renderWallpaperGrid();
                     this.applyWallpaper();
                 }
@@ -338,7 +342,7 @@ const Settings = {
         if (clockFormatEl) {
             clockFormatEl.addEventListener('change', async (e) => {
                 this.settings.clockFormat = e.target.value;
-                await Storage.saveSettings(this.settings);
+                await saveSettings();
                 App.updateClock();
             });
         }
@@ -348,7 +352,7 @@ const Settings = {
         if (showSecondsEl) {
             showSecondsEl.addEventListener('change', async (e) => {
                 this.settings.showSeconds = e.target.checked;
-                await Storage.saveSettings(this.settings);
+                await saveSettings();
                 App.updateClock();
             });
         }
@@ -358,7 +362,7 @@ const Settings = {
         if (defaultEngineEl) {
             defaultEngineEl.addEventListener('change', async (e) => {
                 this.settings.searchEngine = e.target.value;
-                await Storage.saveSettings(this.settings);
+                await saveSettings();
                 this.updateSearchEngineIcon();
             });
         }
@@ -368,7 +372,7 @@ const Settings = {
         if (showSidebarEl) {
             showSidebarEl.addEventListener('change', async (e) => {
                 this.settings.showSidebar = e.target.checked;
-                await Storage.saveSettings(this.settings);
+                await saveSettings();
                 const sidebar = document.getElementById('sidebar');
                 if (sidebar) {
                     sidebar.classList.toggle('collapsed', !e.target.checked);
@@ -381,11 +385,8 @@ const Settings = {
         if (showClockEl) {
             showClockEl.addEventListener('change', async (e) => {
                 this.settings.showClock = e.target.checked;
-                await Storage.saveSettings(this.settings);
-                const clockSection = document.querySelector('.clock-section');
-                if (clockSection) {
-                    clockSection.style.display = e.target.checked ? '' : 'none';
-                }
+                await saveSettings();
+                setSectionVisible(document.querySelector('.clock-section'), e.target.checked);
             });
         }
 
@@ -394,11 +395,8 @@ const Settings = {
         if (showSearchEl) {
             showSearchEl.addEventListener('change', async (e) => {
                 this.settings.showSearch = e.target.checked;
-                await Storage.saveSettings(this.settings);
-                const searchSection = document.querySelector('.search-section');
-                if (searchSection) {
-                    searchSection.style.display = e.target.checked ? '' : 'none';
-                }
+                await saveSettings();
+                setSectionVisible(document.querySelector('.search-section'), e.target.checked);
             });
         }
 
@@ -406,7 +404,7 @@ const Settings = {
         if (languageSelect) {
             languageSelect.addEventListener('change', async (e) => {
                 this.settings.language = e.target.value;
-                await Storage.saveSettings(this.settings);
+                await saveSettings();
                 if (window.I18N) {
                     I18N.apply(this.settings.language);
                 }

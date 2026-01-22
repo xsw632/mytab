@@ -50,49 +50,6 @@ const Categories = {
       `;
         }).join('');
 
-        // 重新绑定拖放事件
-        const categoryItems = container.querySelectorAll('.category-item');
-        categoryItems.forEach(item => {
-            item.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                item.classList.add('drag-over');
-            });
-
-            item.addEventListener('dragleave', () => {
-                item.classList.remove('drag-over');
-            });
-
-            item.addEventListener('drop', async (e) => {
-                e.preventDefault();
-                item.classList.remove('drag-over');
-
-                const targetCategoryId = item.getAttribute('data-id');
-
-                const rawItem = e.dataTransfer.getData('mytabItem');
-                if (rawItem && targetCategoryId) {
-                    try {
-                        const dragged = JSON.parse(rawItem);
-                        if (dragged?.kind === 'shortcut' && dragged?.id) {
-                            await this.moveShortcutToCategory(dragged.id, targetCategoryId);
-                            return;
-                        }
-                        if (dragged?.kind === 'widget' && dragged?.id) {
-                            await Shortcuts.moveWidgetToCategory(dragged.id, targetCategoryId);
-                            return;
-                        }
-                    } catch (err) {
-                        // ignore and fall back to old shortcutId path
-                    }
-                }
-
-                const shortcutId = e.dataTransfer.getData('shortcutId');
-                if (shortcutId && targetCategoryId) {
-                    await this.moveShortcutToCategory(shortcutId, targetCategoryId);
-                }
-            });
-        });
-
-        // 更新当前分类名称
         const currentCat = this.categories.find(c => c.id === this.currentCategory);
         const nameEl = document.getElementById('currentCategoryName');
         if (nameEl && currentCat) {
@@ -131,6 +88,7 @@ const Categories = {
         const closeBtn = document.getElementById('closeCategoryModal');
         const cancelBtn = document.getElementById('cancelCategory');
         const saveBtn = document.getElementById('saveCategory');
+        let dragOverEl = null;
 
         // 点击分类
         container?.addEventListener('click', (e) => {
@@ -151,6 +109,62 @@ const Categories = {
         });
 
         // 添加分类按钮
+        // 拖拽移动（快捷方式/小组件）到分类 - 使用事件委托
+        container?.addEventListener('dragover', (e) => {
+            const item = e.target.closest('.category-item');
+            if (!item) return;
+            e.preventDefault();
+
+            if (dragOverEl && dragOverEl !== item) {
+                dragOverEl.classList.remove('drag-over');
+            }
+            item.classList.add('drag-over');
+            dragOverEl = item;
+        });
+
+        container?.addEventListener('dragleave', (e) => {
+            if (!container) return;
+            const related = e.relatedTarget;
+            if (related && container.contains(related)) return;
+            if (dragOverEl) {
+                dragOverEl.classList.remove('drag-over');
+                dragOverEl = null;
+            }
+        });
+
+        container?.addEventListener('drop', async (e) => {
+            const item = e.target.closest('.category-item');
+            if (!item) return;
+            e.preventDefault();
+
+            item.classList.remove('drag-over');
+            if (dragOverEl === item) dragOverEl = null;
+
+            const targetCategoryId = item.getAttribute('data-id');
+
+            const rawItem = e.dataTransfer.getData('mytabItem');
+            if (rawItem && targetCategoryId) {
+                try {
+                    const dragged = JSON.parse(rawItem);
+                    if (dragged?.kind === 'shortcut' && dragged?.id) {
+                        await this.moveShortcutToCategory(dragged.id, targetCategoryId);
+                        return;
+                    }
+                    if (dragged?.kind === 'widget' && dragged?.id) {
+                        await Shortcuts.moveWidgetToCategory(dragged.id, targetCategoryId);
+                        return;
+                    }
+                } catch (err) {
+                    // ignore and fall back to old shortcutId path
+                }
+            }
+
+            const shortcutId = e.dataTransfer.getData('shortcutId');
+            if (shortcutId && targetCategoryId) {
+                await this.moveShortcutToCategory(shortcutId, targetCategoryId);
+            }
+        });
+
         addBtn?.addEventListener('click', () => this.showModal());
 
         // 关闭模态框

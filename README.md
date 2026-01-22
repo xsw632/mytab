@@ -95,17 +95,6 @@ mytab/
   - `https://images.unsplash.com/*`（内置在线壁纸）
   - `https://api.open-meteo.com/*`、`https://geocoding-api.open-meteo.com/*`（天气小组件）
 
-## ?? Edge/Chrome 商店的“语言识别”为什么会出现多国语言？
-
-商店后台会从扩展包里**自动识别**支持的语言（你在上传时看到的 “We have identified the following languages from your extension package.” 就是这个意思），常见来源是：
-
-- `manifest.json` 里的 `"default_locale"`
-- `_locales/<locale>/messages.json`（每个文件夹代表一个语言/地区，例如 `en`、`zh_CN`、`ja`、`fr`、`de`、`es`、`ko`、`it` 等）
-
-如果你不希望商店显示某些语言：
-- 不要在包里带上对应的 `_locales/<locale>/` 目录
-- 或者只保留你确实维护的语言文件，并将 `"default_locale"` 指向默认语言
-
 ## 🤝 贡献指南
 
 欢迎提交Issue和Pull Request来改进这个项目！

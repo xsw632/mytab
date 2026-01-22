@@ -2,6 +2,17 @@
  * Popup Module - 扩展弹出窗口逻辑
  */
 
+const POPUP_STORAGE_KEYS = ['settings', 'categories', 'shortcuts', 'widgets'];
+const POPUP_LOCAL_KEYS = {
+    settings: 'mytab_settings',
+    categories: 'mytab_categories',
+    shortcuts: 'mytab_shortcuts',
+    widgets: 'mytab_widgets'
+};
+
+const popupHasChromeStorage = () => typeof chrome !== 'undefined' && !!chrome?.storage?.local;
+const popupReadLocalJson = (key, fallbackValue) => JSON.parse(localStorage.getItem(key)) || fallbackValue;
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 获取存储数据
     const data = await getStorageData();
@@ -57,14 +68,14 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 function getStorageData() {
     return new Promise((resolve) => {
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.get(['settings', 'categories', 'shortcuts', 'widgets'], resolve);
+        if (popupHasChromeStorage()) {
+            chrome.storage.local.get(POPUP_STORAGE_KEYS, resolve);
         } else {
             resolve({
-                settings: JSON.parse(localStorage.getItem('mytab_settings')) || {},
-                categories: JSON.parse(localStorage.getItem('mytab_categories')) || [],
-                shortcuts: JSON.parse(localStorage.getItem('mytab_shortcuts')) || [],
-                widgets: JSON.parse(localStorage.getItem('mytab_widgets')) || []
+                settings: popupReadLocalJson(POPUP_LOCAL_KEYS.settings, {}),
+                categories: popupReadLocalJson(POPUP_LOCAL_KEYS.categories, []),
+                shortcuts: popupReadLocalJson(POPUP_LOCAL_KEYS.shortcuts, []),
+                widgets: popupReadLocalJson(POPUP_LOCAL_KEYS.widgets, [])
             });
         }
     });
@@ -150,10 +161,10 @@ async function addCurrentWebsite(categoryId) {
     shortcuts.push(newShortcut);
 
     // 保存到存储
-    if (typeof chrome !== 'undefined' && chrome.storage) {
+    if (popupHasChromeStorage()) {
         await chrome.storage.local.set({ shortcuts });
     } else {
-        localStorage.setItem('mytab_shortcuts', JSON.stringify(shortcuts));
+        localStorage.setItem(POPUP_LOCAL_KEYS.shortcuts, JSON.stringify(shortcuts));
     }
 
     // 显示成功消息
