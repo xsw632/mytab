@@ -14,13 +14,14 @@ const popupHasChromeStorage = () => typeof chrome !== 'undefined' && !!chrome?.s
 const popupReadLocalJson = (key, fallbackValue) => JSON.parse(localStorage.getItem(key)) || fallbackValue;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const getEl = (id) => document.getElementById(id);
     // 获取存储数据
     const data = await getStorageData();
 
     // 更新统计
     const shortcutCount = (data.shortcuts?.length || 0) + (data.widgets?.length || 0);
-    document.getElementById('shortcutCount').textContent = shortcutCount;
-    document.getElementById('categoryCount').textContent = data.categories?.length || 0;
+    getEl('shortcutCount').textContent = shortcutCount;
+    getEl('categoryCount').textContent = data.categories?.length || 0;
 
     // 壁纸名称
     const wp = data.settings?.customWallpaper || data.settings?.wallpaper || 'none';
@@ -32,10 +33,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (wp.startsWith('http')) {
         wpName = '自定义';
     }
-    document.getElementById('currentWallpaper').textContent = wpName;
+    getEl('currentWallpaper').textContent = wpName;
 
     // 填充分类选择器
-    const categorySelector = document.getElementById('categorySelector');
+    const categorySelector = getEl('categorySelector');
     const categories = data.categories || [];
     categorySelector.innerHTML = '<option value="">选择分类...</option>';
     categories.forEach(cat => {
@@ -52,12 +53,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 添加当前网站按钮
-    document.getElementById('addWebsiteBtn').addEventListener('click', async () => {
+    getEl('addWebsiteBtn').addEventListener('click', async () => {
         await addCurrentWebsite(categorySelector.value);
     });
 
     // 打开新标签页
-    document.getElementById('openNewTab').addEventListener('click', () => {
+    getEl('openNewTab').addEventListener('click', () => {
         chrome.tabs.create({});
         window.close();
     });

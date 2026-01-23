@@ -105,6 +105,9 @@ const App = {
         const contextMenu = document.getElementById('contextMenu');
         const editItem = document.getElementById('editItem');
         const deleteItem = document.getElementById('deleteItem');
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+        const getContextTarget = () => Categories.contextTarget || Shortcuts.contextTarget;
+        const saveSettings = () => Storage.saveSettings(Settings.settings);
 
         // 搜索功能
         searchInput?.addEventListener('keydown', (e) => {
@@ -127,7 +130,7 @@ const App = {
             if (!option) return;
             const engine = option.dataset.engine;
             Settings.settings.searchEngine = engine;
-            await Storage.saveSettings(Settings.settings);
+            await saveSettings();
             Settings.updateSearchEngineIcon();
             searchEngineDropdown.classList.remove('show');
         });
@@ -136,10 +139,9 @@ const App = {
         toggleSidebar?.addEventListener('click', async () => {
             const sidebar = document.getElementById('sidebar');
             const isCollapsed = sidebar.classList.toggle('collapsed');
-            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
             toggleSidebar.title = isCollapsed ? t('toggleSidebarExpand', '展开侧边栏') : t('toggleSidebarCollapse', '收起侧边栏');
             Settings.settings.showSidebar = !isCollapsed;
-            await Storage.saveSettings(Settings.settings);
+            await saveSettings();
             document.getElementById('showSidebar').checked = !isCollapsed;
         });
 
@@ -151,7 +153,7 @@ const App = {
 
         // 右键菜单处理
         editItem?.addEventListener('click', () => {
-            const target = Categories.contextTarget || Shortcuts.contextTarget;
+            const target = getContextTarget();
             if (target) {
                 if (target.type === 'category') {
                     Categories.edit(target.id);
@@ -165,7 +167,7 @@ const App = {
         });
 
         deleteItem?.addEventListener('click', () => {
-            const target = Categories.contextTarget || Shortcuts.contextTarget;
+            const target = getContextTarget();
             if (target) {
                 if (target.type === 'category') {
                     Categories.delete(target.id);

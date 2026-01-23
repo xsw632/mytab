@@ -35,7 +35,8 @@ const Categories = {
      * 渲染分类列表
      */
     render() {
-        const container = document.getElementById('categoryList');
+        const getEl = (id) => document.getElementById(id);
+        const container = getEl('categoryList');
         if (!container) return;
 
         container.innerHTML = this.categories.map(cat => {
@@ -51,7 +52,7 @@ const Categories = {
         }).join('');
 
         const currentCat = this.categories.find(c => c.id === this.currentCategory);
-        const nameEl = document.getElementById('currentCategoryName');
+        const nameEl = getEl('currentCategoryName');
         if (nameEl && currentCat) {
             nameEl.textContent = currentCat.name;
         }
@@ -82,12 +83,13 @@ const Categories = {
      * 绑定事件
      */
     bindEvents() {
-        const container = document.getElementById('categoryList');
-        const addBtn = document.getElementById('addCategoryBtn');
-        const modal = document.getElementById('categoryModal');
-        const closeBtn = document.getElementById('closeCategoryModal');
-        const cancelBtn = document.getElementById('cancelCategory');
-        const saveBtn = document.getElementById('saveCategory');
+        const getEl = (id) => document.getElementById(id);
+        const container = getEl('categoryList');
+        const addBtn = getEl('addCategoryBtn');
+        const modal = getEl('categoryModal');
+        const closeBtn = getEl('closeCategoryModal');
+        const cancelBtn = getEl('cancelCategory');
+        const saveBtn = getEl('saveCategory');
         let dragOverEl = null;
 
         // 点击分类
@@ -185,11 +187,11 @@ const Categories = {
         });
 
         // Emoji selection via delegation
-        const emojiGrid = document.getElementById('categoryEmojiGrid');
+        const emojiGrid = getEl('categoryEmojiGrid');
         emojiGrid?.addEventListener('click', (e) => {
             const item = e.target.closest('.emoji-item');
             if (item) {
-                const iconInput = document.getElementById('categoryIcon');
+                const iconInput = getEl('categoryIcon');
                 if (iconInput) iconInput.value = item.textContent;
             }
         });
@@ -214,11 +216,12 @@ const Categories = {
      * 显示添加/编辑模态框
      */
     showModal(categoryId = null) {
-        const modal = document.getElementById('categoryModal');
-        const title = document.getElementById('categoryModalTitle');
-        const idInput = document.getElementById('editCategoryId');
-        const nameInput = document.getElementById('categoryName');
-        const iconInput = document.getElementById('categoryIcon');
+        const getEl = (id) => document.getElementById(id);
+        const modal = getEl('categoryModal');
+        const title = getEl('categoryModalTitle');
+        const idInput = getEl('editCategoryId');
+        const nameInput = getEl('categoryName');
+        const iconInput = getEl('categoryIcon');
 
         if (categoryId) {
             const cat = this.categories.find(c => c.id === categoryId);
@@ -244,7 +247,8 @@ const Categories = {
      * 渲染表情网格
      */
     renderEmojiGrid(category) {
-        const grid = document.getElementById('categoryEmojiGrid');
+        const getEl = (id) => document.getElementById(id);
+        const grid = getEl('categoryEmojiGrid');
         if (!grid) return;
 
         // Reuse emoji data from Shortcuts to avoid duplication
@@ -258,7 +262,8 @@ const Categories = {
      * 隐藏模态框
      */
     hideModal() {
-        const modal = document.getElementById('categoryModal');
+        const getEl = (id) => document.getElementById(id);
+        const modal = getEl('categoryModal');
         modal.classList.remove('show');
     },
 
@@ -266,9 +271,10 @@ const Categories = {
      * 保存分类
      */
     async save() {
-        const idInput = document.getElementById('editCategoryId');
-        const nameInput = document.getElementById('categoryName');
-        const iconInput = document.getElementById('categoryIcon');
+        const getEl = (id) => document.getElementById(id);
+        const idInput = getEl('editCategoryId');
+        const nameInput = getEl('categoryName');
+        const iconInput = getEl('categoryIcon');
 
         const name = nameInput.value.trim();
         const icon = iconInput.value.trim() || '📁';

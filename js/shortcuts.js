@@ -178,9 +178,10 @@ const Shortcuts = {
         const widgets = this.getCurrentWidgets().map(w => ({ kind: 'widget', item: w }));
         const merged = [...shortcuts, ...widgets];
         merged.sort((a, b) => {
-            const isPinnedA = a.kind === 'widget' && a.item?.type === 'note' && a.item?.data?.pinned === true;
-            const isPinnedB = b.kind === 'widget' && b.item?.type === 'note' && b.item?.data?.pinned === true;
-            if (isPinnedA !== isPinnedB) return isPinnedB - isPinnedA;
+            const isPinned = (entry) => entry.kind === 'widget' && entry.item?.type === 'note' && entry.item?.data?.pinned === true;
+            const pinnedA = isPinned(a) ? 1 : 0;
+            const pinnedB = isPinned(b) ? 1 : 0;
+            if (pinnedA !== pinnedB) return pinnedB - pinnedA;
             return (a.item.order ?? 0) - (b.item.order ?? 0);
         });
         return merged;
@@ -499,12 +500,12 @@ const Shortcuts = {
     getWidgetDisplayV2(widget) {
         const type = widget?.type || 'note';
         const title = widget?.title || this.getDefaultWidgetTitle(type);
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
 
         if (type === 'todo') {
             const items = Array.isArray(widget?.data?.items) ? widget.data.items : [];
             const today = items.filter(i => i.scope !== 'week');
             const week = items.filter(i => i.scope === 'week');
-            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
             const countLine = `${t('todoToday', '今天')} ${today.filter(i => i.done).length}/${today.length} · ${t('todoWeek', '本周')} ${week.filter(i => i.done).length}/${week.length}`;
 
             const renderTodoItem = (item) => {
@@ -577,7 +578,6 @@ const Shortcuts = {
             const last = widget?.data?.last;
             const lastFetched = widget?.data?.lastFetched;
             const ageMin = Number.isFinite(lastFetched) ? Math.floor((Date.now() - lastFetched) / 60000) : null;
-            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
             const ageStr = ageMin === null ? '' : (window.I18N ? I18N.format('minutesAgo', { minutes: ageMin }) : `${ageMin} 分钟前`);
 
             if (last && typeof last.temp === 'number') {
@@ -610,7 +610,6 @@ const Shortcuts = {
 
         const pinned = widget?.data?.pinned === true;
         const content = typeof widget?.data?.content === 'string' ? widget.data.content : '';
-        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
         return {
             title,
             badgeHtml: pinned ? '📌' : '📝',
@@ -621,12 +620,12 @@ const Shortcuts = {
     getWidgetDisplay(widget) {
         const type = widget?.type || 'note';
         const title = widget?.title || this.getDefaultWidgetTitle(type);
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
 
         if (type === 'todo') {
             const items = Array.isArray(widget?.data?.items) ? widget.data.items : [];
             const today = items.filter(i => i.scope !== 'week');
             const week = items.filter(i => i.scope === 'week');
-            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
             const countLine = `${t('todoToday', '今天')} ${today.filter(i => i.done).length}/${today.length} · ${t('todoWeek', '本周')} ${week.filter(i => i.done).length}/${week.length}`;
 
             const renderTodoItem = (item) => {
@@ -676,7 +675,6 @@ const Shortcuts = {
             const last = widget?.data?.last;
             const lastFetched = widget?.data?.lastFetched;
             const ageMin = Number.isFinite(lastFetched) ? Math.floor((Date.now() - lastFetched) / 60000) : null;
-            const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
 
             if (last && typeof last.temp === 'number') {
                 const ageStr = ageMin === null ? '' : ` · ${ageMin}m`;
@@ -698,7 +696,6 @@ const Shortcuts = {
         const pinned = widget?.data?.pinned === true;
         const content = typeof widget?.data?.content === 'string' ? widget.data.content : '';
         const preview = content.trim().slice(0, 120);
-        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
         return {
             icon: pinned ? '📌' : '📝',
             title,
@@ -808,24 +805,30 @@ const Shortcuts = {
      * 绑定事件
      */
     bindEvents() {
-        const container = document.getElementById('shortcutsGrid');
-        const modal = document.getElementById('shortcutModal');
-        const closeBtn = document.getElementById('closeShortcutModal');
-        const cancelBtn = document.getElementById('cancelShortcut');
-        const saveBtn = document.getElementById('saveShortcut');
-        const modalTitle = document.getElementById('shortcutModalTitle');
-        const addTabShortcut = document.getElementById('addTabShortcut');
-        const addTabWidget = document.getElementById('addTabWidget');
-        const widgetType = document.getElementById('widgetType');
-        const widgetTitle = document.getElementById('widgetTitle');
+        const getEl = (id) => document.getElementById(id);
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+        const container = getEl('shortcutsGrid');
+        const modal = getEl('shortcutModal');
+        const closeBtn = getEl('closeShortcutModal');
+        const cancelBtn = getEl('cancelShortcut');
+        const saveBtn = getEl('saveShortcut');
+        const modalTitle = getEl('shortcutModalTitle');
+        const addTabShortcut = getEl('addTabShortcut');
+        const addTabWidget = getEl('addTabWidget');
+        const widgetType = getEl('widgetType');
+        const widgetTitle = getEl('widgetTitle');
         const iconOptions = document.querySelectorAll('.icon-option');
-        const iconInput = document.getElementById('shortcutIcon');
-        const emojiPicker = document.getElementById('emojiPicker');
+        const iconInput = getEl('shortcutIcon');
+        const emojiPicker = getEl('emojiPicker');
+        const shortcutUrlInput = getEl('shortcutUrl');
+        const iconCandidates = getEl('iconCandidates');
+        const iconUploadInput = getEl('iconUploadInput');
+        const uploadPreview = getEl('uploadPreview');
 
         addTabShortcut?.addEventListener('click', () => {
             this.setAddItemTab('shortcut');
             if (modalTitle) modalTitle.textContent = window.I18N ? I18N.t('addShortcutTitle') : '添加快捷方式';
-            document.getElementById('shortcutName')?.focus();
+            getEl('shortcutName')?.focus();
         });
 
         addTabWidget?.addEventListener('click', () => {
@@ -851,32 +854,31 @@ const Shortcuts = {
                 iconInput.style.display = (type === 'custom' || type === 'emoji') ? 'block' : 'none';
                 emojiPicker.style.display = (type === 'emoji') ? 'block' : 'none';
 
-                const uploadPreview = document.getElementById('uploadPreview');
                 if (type === 'upload') {
-                    document.getElementById('iconUploadInput').click();
+                    iconUploadInput.click();
                 } else {
                     uploadPreview.style.display = 'none';
                 }
 
                 if (type === 'auto') {
                     iconInput.placeholder = '';
-                    const url = document.getElementById('shortcutUrl').value.trim();
+                    const url = shortcutUrlInput.value.trim();
                     if (url) this.updateIconCandidates(url);
                 } else if (type === 'custom') {
                     iconInput.placeholder = window.I18N ? I18N.t('iconPlaceholderUrl') : '输入图片 URL...';
-                    document.getElementById('iconCandidates').style.display = 'none';
+                    iconCandidates.style.display = 'none';
                 } else if (type === 'emoji') {
                     iconInput.placeholder = window.I18N ? I18N.t('iconPlaceholderEmoji') : '输入或选择表情符号...';
                     this.renderEmojiGrid('common');
-                    document.getElementById('iconCandidates').style.display = 'none';
+                    iconCandidates.style.display = 'none';
                 } else {
-                    document.getElementById('iconCandidates').style.display = 'none';
+                    iconCandidates.style.display = 'none';
                 }
             });
         });
 
         // URL input change to trigger icon candidates
-        document.getElementById('shortcutUrl')?.addEventListener('blur', (e) => {
+        shortcutUrlInput?.addEventListener('blur', (e) => {
             const activeOption = document.querySelector('.icon-option.active');
             if (activeOption && activeOption.dataset.type === 'auto') {
                 const url = e.target.value.trim();
@@ -885,7 +887,7 @@ const Shortcuts = {
         });
 
         // Icon candidate selection
-        document.getElementById('iconCandidates')?.addEventListener('click', (e) => {
+        iconCandidates?.addEventListener('click', (e) => {
             const candidate = e.target.closest('.icon-candidate');
             if (candidate) {
                 document.querySelectorAll('.icon-candidate').forEach(c => c.classList.remove('active'));
@@ -895,11 +897,10 @@ const Shortcuts = {
         });
 
         // File upload handling
-        const uploadInput = document.getElementById('iconUploadInput');
-        const uploadPreview = document.getElementById('uploadPreview');
+        const uploadInput = iconUploadInput;
         const previewImg = uploadPreview?.querySelector('img');
 
-        const removeUpload = document.getElementById('removeUpload');
+        const removeUpload = getEl('removeUpload');
 
         uploadInput?.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -930,7 +931,7 @@ const Shortcuts = {
         });
 
         // Emoji selection via delegation
-        const emojiGrid = document.getElementById('emojiGrid');
+        const emojiGrid = getEl('emojiGrid');
         emojiGrid?.addEventListener('click', (e) => {
             const item = e.target.closest('.emoji-item');
             if (item) {
@@ -951,7 +952,7 @@ const Shortcuts = {
                 if (!Array.isArray(widget.data.items)) widget.data.items = [];
 
                 const scope = todoAdd.dataset.scope === 'week' ? 'week' : 'today';
-                const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+
                 const text = prompt(scope === 'week' ? t('promptAddTodoWeek', '添加本周待办：') : t('promptAddTodoToday', '添加今天待办：'));
                 if (!text || !text.trim()) return;
 
@@ -1213,7 +1214,8 @@ const Shortcuts = {
      * 渲染表情网格
      */
     renderEmojiGrid(category) {
-        const grid = document.getElementById('emojiGrid');
+        const getEl = (id) => document.getElementById(id);
+        const grid = getEl('emojiGrid');
         if (!grid) return;
 
         const emojis = this.emojis[category] || [];
@@ -1228,12 +1230,13 @@ const Shortcuts = {
     async save() {
         if (this.isSaving) return;
 
-        const idInput = document.getElementById('editShortcutId');
-        const nameInput = document.getElementById('shortcutName');
-        const urlInput = document.getElementById('shortcutUrl');
-        const iconInput = document.getElementById('shortcutIcon');
-        const uploadInput = document.getElementById('iconUploadInput');
-        const saveBtn = document.getElementById('saveShortcut');
+        const getEl = (id) => document.getElementById(id);
+        const idInput = getEl('editShortcutId');
+        const nameInput = getEl('shortcutName');
+        const urlInput = getEl('shortcutUrl');
+        const iconInput = getEl('shortcutIcon');
+        const uploadInput = getEl('iconUploadInput');
+        const saveBtn = getEl('saveShortcut');
 
         this.isSaving = true;
         if (saveBtn) saveBtn.disabled = true;
@@ -1499,26 +1502,27 @@ const Shortcuts = {
      * 显示模态框
      */
     showModal(arg = null) {
-        const modal = document.getElementById('shortcutModal');
-        const title = document.getElementById('shortcutModalTitle');
-        const nameInput = document.getElementById('shortcutName');
-        const urlInput = document.getElementById('shortcutUrl');
-        const iconInput = document.getElementById('shortcutIcon');
-        const idInput = document.getElementById('editShortcutId');
+        const getEl = (id) => document.getElementById(id);
+        const modal = getEl('shortcutModal');
+        const title = getEl('shortcutModalTitle');
+        const nameInput = getEl('shortcutName');
+        const urlInput = getEl('shortcutUrl');
+        const iconInput = getEl('shortcutIcon');
+        const idInput = getEl('editShortcutId');
         const iconOptions = document.querySelectorAll('.icon-option');
-        const emojiPicker = document.getElementById('emojiPicker');
+        const emojiPicker = getEl('emojiPicker');
 
-        const uploadInput = document.getElementById('iconUploadInput');
-        const uploadPreview = document.getElementById('uploadPreview');
+        const uploadInput = getEl('iconUploadInput');
+        const uploadPreview = getEl('uploadPreview');
         const previewImg = uploadPreview?.querySelector('img');
 
-        const widgetIdInput = document.getElementById('editWidgetId');
-        const widgetType = document.getElementById('widgetType');
-        const widgetSize = document.getElementById('widgetSize');
-        const widgetTitle = document.getElementById('widgetTitle');
-        const widgetNote = document.getElementById('widgetNoteContent');
-        const widgetPinned = document.getElementById('widgetNotePinned');
-        const widgetCity = document.getElementById('widgetWeatherCity');
+        const widgetIdInput = getEl('editWidgetId');
+        const widgetType = getEl('widgetType');
+        const widgetSize = getEl('widgetSize');
+        const widgetTitle = getEl('widgetTitle');
+        const widgetNote = getEl('widgetNoteContent');
+        const widgetPinned = getEl('widgetNotePinned');
+        const widgetCity = getEl('widgetWeatherCity');
 
         let kind = 'shortcut';
         let id = arg;
@@ -1553,7 +1557,7 @@ const Shortcuts = {
         emojiPicker.style.display = 'none';
 
         // Clear icon candidates from previous dialog
-        const iconCandidates = document.getElementById('iconCandidates');
+        const iconCandidates = getEl('iconCandidates');
         if (iconCandidates) {
             iconCandidates.innerHTML = '';
             iconCandidates.style.display = 'none';
@@ -1686,6 +1690,7 @@ const Shortcuts = {
     async updateIconCandidates(url) {
         const container = document.getElementById('iconCandidates');
         if (!container) return;
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
 
         const requestId = ++this.iconCandidateRequestId;
 
@@ -1700,7 +1705,7 @@ const Shortcuts = {
         }
 
         container.style.display = 'grid';
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 10px; font-size: 12px; color: var(--text-muted);">${this.escapeHtml(window.I18N ? I18N.t('iconsFetching') : '正在获取图标...')}</div>`;
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 10px; font-size: 12px; color: var(--text-muted);">${this.escapeHtml(t('iconsFetching', '正在获取图标...'))}</div>`;
 
         const seenIcons = new Set();
         const candidates = [];
