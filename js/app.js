@@ -97,17 +97,24 @@ const App = {
      * 绑定事件
      */
     bindEvents() {
-        const searchInput = document.getElementById('searchInput');
-        const searchBtn = document.getElementById('searchBtn');
-        const searchEngineSelector = document.getElementById('searchEngineSelector');
-        const searchEngineDropdown = document.getElementById('searchEngineDropdown');
-        const toggleSidebar = document.getElementById('toggleSidebar');
-        const contextMenu = document.getElementById('contextMenu');
-        const editItem = document.getElementById('editItem');
-        const deleteItem = document.getElementById('deleteItem');
+        const getEl = (id) => document.getElementById(id);
+        const searchInput = getEl('searchInput');
+        const searchBtn = getEl('searchBtn');
+        const searchEngineSelector = getEl('searchEngineSelector');
+        const searchEngineDropdown = getEl('searchEngineDropdown');
+        const toggleSidebar = getEl('toggleSidebar');
+        const contextMenu = getEl('contextMenu');
+        const editItem = getEl('editItem');
+        const deleteItem = getEl('deleteItem');
+        const sidebar = getEl('sidebar');
+        const showSidebarCheckbox = getEl('showSidebar');
         const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
         const getContextTarget = () => Categories.contextTarget || Shortcuts.contextTarget;
         const saveSettings = () => Storage.saveSettings(Settings.settings);
+        const hideMenus = () => {
+            searchEngineDropdown?.classList.remove('show');
+            contextMenu?.classList.remove('show');
+        };
 
         // 搜索功能
         searchInput?.addEventListener('keydown', (e) => {
@@ -137,19 +144,15 @@ const App = {
 
         // 切换侧边栏
         toggleSidebar?.addEventListener('click', async () => {
-            const sidebar = document.getElementById('sidebar');
             const isCollapsed = sidebar.classList.toggle('collapsed');
             toggleSidebar.title = isCollapsed ? t('toggleSidebarExpand', '展开侧边栏') : t('toggleSidebarCollapse', '收起侧边栏');
             Settings.settings.showSidebar = !isCollapsed;
             await saveSettings();
-            document.getElementById('showSidebar').checked = !isCollapsed;
+            showSidebarCheckbox.checked = !isCollapsed;
         });
 
         // 点击其他地方关闭下拉菜单和右键菜单
-        document.addEventListener('click', () => {
-            searchEngineDropdown?.classList.remove('show');
-            contextMenu?.classList.remove('show');
-        });
+        document.addEventListener('click', hideMenus);
 
         // 右键菜单处理
         editItem?.addEventListener('click', () => {
@@ -163,7 +166,7 @@ const App = {
                     Shortcuts.editWidget(target.id);
                 }
             }
-            contextMenu.classList.remove('show');
+            hideMenus();
         });
 
         deleteItem?.addEventListener('click', () => {
@@ -177,7 +180,7 @@ const App = {
                     Shortcuts.deleteWidget(target.id);
                 }
             }
-            contextMenu.classList.remove('show');
+            hideMenus();
         });
 
         // ESC 关闭模态框

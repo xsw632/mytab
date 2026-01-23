@@ -116,6 +116,13 @@ function generateId() {
  * 添加当前网站到选中的分类
  */
 async function addCurrentWebsite(categoryId) {
+    const saveShortcuts = (shortcuts) => {
+        if (popupHasChromeStorage()) {
+            return chrome.storage.local.set({ shortcuts });
+        }
+        localStorage.setItem(POPUP_LOCAL_KEYS.shortcuts, JSON.stringify(shortcuts));
+        return Promise.resolve();
+    };
     // 验证分类ID
     if (!categoryId) {
         alert('请先选择一个分类');
@@ -162,11 +169,7 @@ async function addCurrentWebsite(categoryId) {
     shortcuts.push(newShortcut);
 
     // 保存到存储
-    if (popupHasChromeStorage()) {
-        await chrome.storage.local.set({ shortcuts });
-    } else {
-        localStorage.setItem(POPUP_LOCAL_KEYS.shortcuts, JSON.stringify(shortcuts));
-    }
+    await saveShortcuts(shortcuts);
 
     // 显示成功消息
     showSuccessMessage();

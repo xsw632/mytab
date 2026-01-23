@@ -222,17 +222,18 @@ const Categories = {
         const idInput = getEl('editCategoryId');
         const nameInput = getEl('categoryName');
         const iconInput = getEl('categoryIcon');
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
 
         if (categoryId) {
             const cat = this.categories.find(c => c.id === categoryId);
             if (cat) {
-                title.textContent = window.I18N ? I18N.t('categoryEditTitle') : '✏️ 编辑分类';
+                title.textContent = t('categoryEditTitle', '✏️ 编辑分类');
                 idInput.value = categoryId;
                 nameInput.value = cat.name;
                 iconInput.value = cat.icon;
             }
         } else {
-            title.textContent = window.I18N ? I18N.t('categoryAddTitle') : '➕ 添加分类';
+            title.textContent = t('categoryAddTitle', '➕ 添加分类');
             idInput.value = '';
             nameInput.value = '';
             iconInput.value = '';
@@ -320,7 +321,8 @@ const Categories = {
         const cat = this.categories.find(c => c.id === id);
         if (cat?.isDefault) return;
 
-        const homeName = this.categories.find(c => c.id === 'home')?.name || (window.I18N ? I18N.t('currentCategoryHome') : '首页');
+        const t = (key, fallback) => window.I18N ? I18N.t(key) : fallback;
+        const homeName = this.categories.find(c => c.id === 'home')?.name || t('currentCategoryHome', '首页');
         const msg = window.I18N
             ? I18N.format('confirmDeleteCategory', { name: cat?.name || '', home: homeName })
             : `确定要删除分类 "${cat?.name}" 吗？该分类下的快捷方式将移至首页。`;
